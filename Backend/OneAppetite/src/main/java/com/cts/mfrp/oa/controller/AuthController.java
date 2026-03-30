@@ -2,8 +2,10 @@ package com.cts.mfrp.oa.controller;
 
 import com.cts.mfrp.oa.dto.request.LoginRequest;
 import com.cts.mfrp.oa.dto.request.RegisterRequest;
+import com.cts.mfrp.oa.dto.request.VendorRegisterRequest;
 import com.cts.mfrp.oa.dto.response.LoginResponse;
 import com.cts.mfrp.oa.dto.response.UserResponse;
+import com.cts.mfrp.oa.dto.response.VendorRegisterResponse;
 import com.cts.mfrp.oa.service.AuthService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -24,6 +26,11 @@ public class AuthController {
     @PostMapping("/register")
     public ResponseEntity<UserResponse> register(@Valid @RequestBody RegisterRequest request) {
         return ResponseEntity.status(201).body(authService.register(request));
+    }
+
+    @PostMapping("/register/vendor")
+    public ResponseEntity<VendorRegisterResponse> registerVendor(@Valid @RequestBody VendorRegisterRequest request) {
+        return ResponseEntity.status(201).body(authService.registerVendor(request));
     }
 
     @PostMapping("/login")

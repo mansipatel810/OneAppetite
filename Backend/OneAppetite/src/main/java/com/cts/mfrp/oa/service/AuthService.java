@@ -2,13 +2,18 @@ package com.cts.mfrp.oa.service;
 
 import com.cts.mfrp.oa.dto.request.LoginRequest;
 import com.cts.mfrp.oa.dto.request.RegisterRequest;
+import com.cts.mfrp.oa.dto.request.VendorRegisterRequest;
 import com.cts.mfrp.oa.dto.response.LoginResponse;
 import com.cts.mfrp.oa.dto.response.UserResponse;
+import com.cts.mfrp.oa.dto.response.VendorRegisterResponse;
 import com.cts.mfrp.oa.exception.EmailAlreadyExistsException;
 import com.cts.mfrp.oa.exception.InvalidCredentialsException;
 import com.cts.mfrp.oa.exception.InvalidEmailDomainException;
+import com.cts.mfrp.oa.exception.ResourceNotFoundException;
+import com.cts.mfrp.oa.model.Building;
 import com.cts.mfrp.oa.model.Role;
 import com.cts.mfrp.oa.model.User;
+import com.cts.mfrp.oa.repository.BuildingRepository;
 import com.cts.mfrp.oa.repository.UserRepository;
 import com.cts.mfrp.oa.security.UserDetailsServiceImpl;
 import com.cts.mfrp.oa.util.JwtUtil;
@@ -31,15 +36,18 @@ public class AuthService {
     private final JwtUtil jwtUtil;
     private final UserDetailsServiceImpl userDetailsService;
     private final AuthenticationManager authenticationManager;
+    private final BuildingRepository buildingRepository;
 
     public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder,
                        JwtUtil jwtUtil, UserDetailsServiceImpl userDetailsService,
-                       AuthenticationManager authenticationManager) {
+                       AuthenticationManager authenticationManager,
+                       BuildingRepository buildingRepository) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtUtil = jwtUtil;
         this.userDetailsService = userDetailsService;
         this.authenticationManager = authenticationManager;
+        this.buildingRepository = buildingRepository;
     }
 
     public UserResponse register(RegisterRequest request) {
@@ -71,6 +79,46 @@ public class AuthService {
                 saved.getPhone(),
                 saved.getRole().name(),
                 token
+        );
+    }
+
+    public VendorRegisterResponse registerVendor(VendorRegisterRequest request) {
+        if (userRepository.existsByEmail(request.email())) {
+            throw new EmailAlreadyExistsException("Email already registered: " + request.email());
+        }
+
+        String domain = request.email().substring(request.email().indexOf('@') + 1).toLowerCase();
+        if (!ALLOWED_DOMAINS.contains(domain)) {
+            throw new InvalidEmailDomainException("Email domain not allowed. Use a corporate email.");
+        }
+
+        Building building = buildingRepository.findById(request.buildingId())
+                .orElseThrow(() -> new ResourceNotFoundException("Building not found with ID: " + request.buildingId()));
+
+        User user = new User();
+        user.setName(request.name());
+        user.setEmail(request.email());
+        user.setPhone(request.phone());
+        user.setPassword(passwordEncoder.encode(request.password()));
+        user.setVendorName(request.vendorName());
+        user.setVendorDescription(request.vendorDescription());
+        user.setBuilding(building);
+        user.setRole(Role.VENDOR);
+        user.setIsActive(true);
+
+        User saved = userRepository.save(user);
+        String token = jwtUtil.generateToken(userDetailsService.loadUserByUsername(saved.getEmail()), saved.getTokenVersion());
+
+        return new VendorRegisterResponse(
+                saved.getUserId(),
+                saved.getName(),
+                saved.getEmail(),
+                saved.getPhone(),
+                saved.getRole().name(),
+                token,
+                saved.getVendorName(),
+                saved.getVendorDescription(),
+                saved.getBuilding().getBuildingId()
         );
     }
 
