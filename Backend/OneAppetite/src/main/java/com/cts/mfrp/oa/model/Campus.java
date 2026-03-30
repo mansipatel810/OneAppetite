@@ -1,27 +1,36 @@
 package com.cts.mfrp.oa.model;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
+import lombok.*;
 import jakarta.persistence.*;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import java.util.List;
 
 @Entity
-@Table(name = "CAMPUSES")
-@Data
+@Table(name = "campuses")
+@Getter
+@Setter
 @NoArgsConstructor
+@AllArgsConstructor
 public class Campus {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "campus_id")
-    private Integer campusId;
+    private Integer campus_id;
 
+
+    @JsonBackReference
     @ManyToOne
-    @JoinColumn(name = "city_id", nullable = false)
+    @JoinColumn(name = "city_id")
     private City city;
 
-    @Column(name = "campus_name", nullable = false, length = 100)
+    @Column(name = "campus_name")
     private String campusName;
 
-    @Column(length = 255)
     private String address;
+
+    @JsonManagedReference
+    @OneToMany(mappedBy = "campus")
+    private List<Building> buildings;
+
+
 }
