@@ -1,14 +1,21 @@
 package com.cts.mfrp.oa.service;
 
+import com.cts.mfrp.oa.dto.request.LoginRequest;
 import com.cts.mfrp.oa.dto.request.RegisterRequest;
+import com.cts.mfrp.oa.dto.response.LoginResponse;
 import com.cts.mfrp.oa.dto.response.UserResponse;
 import com.cts.mfrp.oa.exception.EmailAlreadyExistsException;
+import com.cts.mfrp.oa.exception.InvalidCredentialsException;
 import com.cts.mfrp.oa.exception.InvalidEmailDomainException;
 import com.cts.mfrp.oa.model.Role;
 import com.cts.mfrp.oa.model.User;
 import com.cts.mfrp.oa.repository.UserRepository;
 import com.cts.mfrp.oa.security.UserDetailsServiceImpl;
 import com.cts.mfrp.oa.util.JwtUtil;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -23,11 +30,16 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
     private final UserDetailsServiceImpl userDetailsService;
-    public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtUtil jwtUtil, UserDetailsServiceImpl userDetailsService) {
+    private final AuthenticationManager authenticationManager;
+
+    public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder,
+                       JwtUtil jwtUtil, UserDetailsServiceImpl userDetailsService,
+                       AuthenticationManager authenticationManager) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtUtil = jwtUtil;
         this.userDetailsService = userDetailsService;
+        this.authenticationManager = authenticationManager;
     }
 
     public UserResponse register(RegisterRequest request) {
@@ -50,7 +62,7 @@ public class AuthService {
 
         User saved = userRepository.save(user);
 
-        String token = jwtUtil.generateToken(userDetailsService.loadUserByUsername(saved.getEmail()));
+        String token = jwtUtil.generateToken(userDetailsService.loadUserByUsername(saved.getEmail()), saved.getTokenVersion());
 
         return new UserResponse(
                 saved.getUserId(),
@@ -60,5 +72,28 @@ public class AuthService {
                 saved.getRole().name(),
                 token
         );
+    }
+
+    public LoginResponse login(LoginRequest request) {
+        try {
+            authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(request.email(), request.password())
+            );
+        } catch (BadCredentialsException e) {
+            throw new InvalidCredentialsException("Invalid email or password.");
+        }
+
+        User user = userRepository.findByEmail(request.email()).orElseThrow();
+        UserDetails userDetails = userDetailsService.loadUserByUsername(user.getEmail());
+        String token = jwtUtil.generateToken(userDetails, user.getTokenVersion());
+
+        return new LoginResponse(token, user.getUserId(), user.getName(), user.getEmail(), user.getRole().name());
+    }
+
+    public void logout(String token) {
+        String email = jwtUtil.extractUsername(token);
+        User user = userRepository.findByEmail(email).orElseThrow();
+        user.setTokenVersion(user.getTokenVersion() + 1);
+        userRepository.save(user);
     }
 }

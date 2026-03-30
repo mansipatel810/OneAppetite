@@ -8,6 +8,7 @@ import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
 import java.util.Date;
+import java.util.Map;
 
 @Component
 public class JwtUtil {
@@ -22,13 +23,24 @@ public class JwtUtil {
         return Keys.hmacShaKeyFor(jwtConfig.getSecret().getBytes());
     }
 
-    public String generateToken(UserDetails userDetails) {
+    public String generateToken(UserDetails userDetails, int tokenVersion) {
         return Jwts.builder()
                 .subject(userDetails.getUsername())
+                .claims(Map.of("tokenVersion", tokenVersion))
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + jwtConfig.getExpiration()))
                 .signWith(getSigningKey())
                 .compact();
+    }
+
+    public int extractTokenVersion(String token) {
+        Object version = Jwts.parser()
+                .verifyWith(getSigningKey())
+                .build()
+                .parseSignedClaims(token)
+                .getPayload()
+                .get("tokenVersion");
+        return version != null ? ((Number) version).intValue() : 0;
     }
 
     public String extractUsername(String token) {
