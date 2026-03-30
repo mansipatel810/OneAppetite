@@ -1,10 +1,9 @@
 package com.cts.mfrp.oa.dto.response;
 
-public record UserResponse(
+public record LoginResponse(
+        String token,
         Integer userId,
         String name,
         String email,
-        String phone,
-        String role,
-        String token
+        String role
 ) {}
