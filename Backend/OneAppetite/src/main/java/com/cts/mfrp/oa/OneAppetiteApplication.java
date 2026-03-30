@@ -7,10 +7,9 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 public class OneAppetiteApplication {
 
 	public static void main(String[] args) {
-
+    
         SpringApplication.run(OneAppetiteApplication.class, args);
         System.out.println("hello");
         System.out.println(" OneAppetite Backend is Running on Port 8081!");
 	}
-
 }
