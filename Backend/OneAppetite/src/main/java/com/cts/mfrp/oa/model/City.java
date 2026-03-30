@@ -1,20 +1,25 @@
 package com.cts.mfrp.oa.model;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
+import lombok.*;
 import jakarta.persistence.*;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import java.util.List;
 
 @Entity
-@Table(name = "CITIES")
-@Data
+@Table(name = "cities")
+@Getter
+@Setter
 @NoArgsConstructor
+@AllArgsConstructor
 public class City {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "city_id")
-    private Integer cityId;
+    private Integer city_id;
 
-    @Column(name = "city_name", nullable = false, length = 100)
+    @Column(name = "city_name")
     private String cityName;
+
+    @JsonManagedReference
+    @OneToMany(mappedBy = "city")
+    private List<Campus> campuses;
 }
