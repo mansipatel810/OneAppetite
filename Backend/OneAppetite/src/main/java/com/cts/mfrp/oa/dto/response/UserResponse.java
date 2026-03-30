@@ -5,5 +5,6 @@ public record UserResponse(
         String name,
         String email,
         String phone,
-        String role
+        String role,
+        String token
 ) {}

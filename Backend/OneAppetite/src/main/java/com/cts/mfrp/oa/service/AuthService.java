@@ -7,6 +7,8 @@ import com.cts.mfrp.oa.exception.InvalidEmailDomainException;
 import com.cts.mfrp.oa.model.Role;
 import com.cts.mfrp.oa.model.User;
 import com.cts.mfrp.oa.repository.UserRepository;
+import com.cts.mfrp.oa.security.UserDetailsServiceImpl;
+import com.cts.mfrp.oa.util.JwtUtil;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -19,10 +21,13 @@ public class AuthService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
-
-    public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+    private final JwtUtil jwtUtil;
+    private final UserDetailsServiceImpl userDetailsService;
+    public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtUtil jwtUtil, UserDetailsServiceImpl userDetailsService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.jwtUtil = jwtUtil;
+        this.userDetailsService = userDetailsService;
     }
 
     public UserResponse register(RegisterRequest request) {
@@ -45,12 +50,15 @@ public class AuthService {
 
         User saved = userRepository.save(user);
 
+        String token = jwtUtil.generateToken(userDetailsService.loadUserByUsername(saved.getEmail()));
+
         return new UserResponse(
                 saved.getUserId(),
                 saved.getName(),
                 saved.getEmail(),
                 saved.getPhone(),
-                saved.getRole().name()
+                saved.getRole().name(),
+                token
         );
     }
 }
