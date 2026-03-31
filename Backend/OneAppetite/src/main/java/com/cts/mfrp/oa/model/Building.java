@@ -13,7 +13,7 @@ import jakarta.persistence.*;
 public class Building {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer building_id;
+    private Integer buildingId;
 
     @JsonBackReference
     @ManyToOne
