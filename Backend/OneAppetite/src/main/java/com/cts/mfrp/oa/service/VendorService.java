@@ -1,0 +1,36 @@
+package com.cts.mfrp.oa.service;
+
+import com.cts.mfrp.oa.dto.response.VendorRegisterResponse;
+import com.cts.mfrp.oa.model.Building;
+import com.cts.mfrp.oa.model.Role;
+import com.cts.mfrp.oa.model.User;
+import com.cts.mfrp.oa.repository.BuildingRepository;
+import com.cts.mfrp.oa.repository.UserRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+
+@Service
+public class VendorService {
+
+    @Autowired private BuildingRepository buildingRepo;
+    @Autowired private UserRepository userRepo;
+
+    public List<VendorRegisterResponse> getVendorsByBuilding(Integer buildingId) {
+        Building building = buildingRepo.findById(buildingId).orElse(null);
+        List<User> vendors = userRepo.findByBuildingAndRole(building, Role.VENDOR);
+
+        return vendors.stream().map(v -> new VendorRegisterResponse(
+                v.getUserId(),
+                v.getName(),
+                v.getEmail(),
+                v.getPhone(),
+                v.getRole().name(),
+                null, // token can be set later if you generate JWTs
+                v.getVendorName(),
+                v.getVendorDescription(),
+                v.getBuilding().getBuildingId()
+        )).toList();
+    }
+}
