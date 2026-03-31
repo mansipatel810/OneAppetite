@@ -25,5 +25,7 @@ public record VendorRegisterRequest(
         String vendorDescription,
 
         @NotNull(message = "Building ID is required")
-        Integer buildingId
+        Integer buildingId,
+
+        String vendorImageUrl
 ) {}
