@@ -1,4 +1,85 @@
 package com.cts.mfrp.oa.service;
 
+import com.cts.mfrp.oa.dto.response.MenuItemResponse;
+import com.cts.mfrp.oa.model.MenuItem;
+import com.cts.mfrp.oa.model.Role;
+import com.cts.mfrp.oa.model.User;
+import com.cts.mfrp.oa.repository.MenuItemRepository;
+import com.cts.mfrp.oa.repository.UserRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+
+@Service
 public class MenuItemService {
+
+    @Autowired private MenuItemRepository menuItemRepo;
+    @Autowired private UserRepository userRepo;
+
+    private User validateVendor(Integer vendorId) {
+        User vendor = userRepo.findById(vendorId).orElseThrow();
+        if (vendor.getRole() != Role.VENDOR) {
+            throw new IllegalArgumentException("User is not a vendor");
+        }
+        return vendor;
+    }
+
+    // CREATE
+    public MenuItem addMenuItem(MenuItem item, Integer vendorId) {
+        User vendor = validateVendor(vendorId);
+        item.setVendor(vendor);
+        return menuItemRepo.save(item);
+    }
+
+    // READ
+    public List<MenuItemResponse> getMenuItemsByVendor(Integer vendorId) {
+        User vendor = validateVendor(vendorId);
+        return menuItemRepo.findByVendor(vendor).stream()
+                .map(item -> new MenuItemResponse(
+                        item.getItemId(),
+                        item.getItemName(),
+                        item.getCategory(),
+                        item.getPrice(),
+                        item.getQuantityAvailable(),
+                        item.getIsInStock(),
+                        item.getImageUrl(),
+                        item.getVendor().getUserId(),
+                        item.getVendor().getVendorName(),
+                        item.getVendor().getVendorDescription()
+                ))
+                .toList();
+    }
+
+
+    // UPDATE
+    public MenuItem updateMenuItem(Integer vendorId, Integer itemId, MenuItem updatedItem) {
+        User vendor = validateVendor(vendorId);
+        MenuItem existing = menuItemRepo.findById(itemId).orElseThrow();
+
+        if (!existing.getVendor().equals(vendor)) {
+            throw new IllegalArgumentException("Vendor does not own this menu item");
+        }
+
+        existing.setItemName(updatedItem.getItemName());
+        existing.setCategory(updatedItem.getCategory());
+        existing.setPrice(updatedItem.getPrice());
+        existing.setQuantityAvailable(updatedItem.getQuantityAvailable());
+        existing.setIsInStock(updatedItem.getIsInStock());
+        existing.setImageUrl(updatedItem.getImageUrl());
+
+        return menuItemRepo.save(existing);
+    }
+
+    // DELETE
+    public void deleteMenuItem(Integer vendorId, Integer itemId) {
+        User vendor = validateVendor(vendorId);
+        MenuItem existing = menuItemRepo.findById(itemId).orElseThrow();
+
+        if (!existing.getVendor().equals(vendor)) {
+            throw new IllegalArgumentException("Vendor does not own this menu item");
+        }
+
+        menuItemRepo.delete(existing);
+    }
 }
