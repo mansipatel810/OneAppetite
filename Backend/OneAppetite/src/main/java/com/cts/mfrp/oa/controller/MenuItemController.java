@@ -16,7 +16,7 @@ public class MenuItemController {
 
     // CREATE
     @PostMapping("/vendor/{vendorId}")
-    public MenuItem addMenuItem(@RequestBody MenuItem item, @PathVariable Integer vendorId) {
+    public MenuItemResponse addMenuItem(@RequestBody MenuItem item, @PathVariable Integer vendorId) {
         return menuItemService.addMenuItem(item, vendorId);
     }
 
@@ -26,12 +26,11 @@ public class MenuItemController {
         return menuItemService.getMenuItemsByVendor(vendorId);
     }
 
-
     // UPDATE
     @PutMapping("/vendor/{vendorId}/item/{itemId}")
-    public MenuItem updateMenuItem(@PathVariable Integer vendorId,
-                                   @PathVariable Integer itemId,
-                                   @RequestBody MenuItem updatedItem) {
+    public MenuItemResponse updateMenuItem(@PathVariable Integer vendorId,
+                                           @PathVariable Integer itemId,
+                                           @RequestBody MenuItem updatedItem) {
         return menuItemService.updateMenuItem(vendorId, itemId, updatedItem);
     }
 

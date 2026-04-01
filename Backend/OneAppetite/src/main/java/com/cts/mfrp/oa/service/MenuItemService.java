@@ -25,35 +25,39 @@ public class MenuItemService {
         return vendor;
     }
 
+    private MenuItemResponse toResponse(MenuItem item) {
+        return new MenuItemResponse(
+                item.getItemId(),
+                item.getItemName(),
+                item.getCategory(),
+                item.getPrice(),
+                item.getQuantityAvailable(),
+                item.getIsInStock(),
+                item.getImageUrl(),
+                item.getVendor().getUserId(),
+                item.getVendor().getVendorName(),
+                item.getVendor().getVendorDescription()
+        );
+    }
+
     // CREATE
-    public MenuItem addMenuItem(MenuItem item, Integer vendorId) {
+    public MenuItemResponse addMenuItem(MenuItem item, Integer vendorId) {
         User vendor = validateVendor(vendorId);
         item.setVendor(vendor);
-        return menuItemRepo.save(item);
+        MenuItem saved = menuItemRepo.save(item);
+        return toResponse(saved);
     }
 
     // READ
     public List<MenuItemResponse> getMenuItemsByVendor(Integer vendorId) {
         User vendor = validateVendor(vendorId);
         return menuItemRepo.findByVendor(vendor).stream()
-                .map(item -> new MenuItemResponse(
-                        item.getItemId(),
-                        item.getItemName(),
-                        item.getCategory(),
-                        item.getPrice(),
-                        item.getQuantityAvailable(),
-                        item.getIsInStock(),
-                        item.getImageUrl(),
-                        item.getVendor().getUserId(),
-                        item.getVendor().getVendorName(),
-                        item.getVendor().getVendorDescription()
-                ))
+                .map(this::toResponse)
                 .toList();
     }
 
-
     // UPDATE
-    public MenuItem updateMenuItem(Integer vendorId, Integer itemId, MenuItem updatedItem) {
+    public MenuItemResponse updateMenuItem(Integer vendorId, Integer itemId, MenuItem updatedItem) {
         User vendor = validateVendor(vendorId);
         MenuItem existing = menuItemRepo.findById(itemId).orElseThrow();
 
@@ -68,7 +72,8 @@ public class MenuItemService {
         existing.setIsInStock(updatedItem.getIsInStock());
         existing.setImageUrl(updatedItem.getImageUrl());
 
-        return menuItemRepo.save(existing);
+        MenuItem saved = menuItemRepo.save(existing);
+        return toResponse(saved);
     }
 
     // DELETE
