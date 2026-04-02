@@ -21,6 +21,12 @@ public class MenuItem {
     @Column(name = "category", nullable = false, length = 50)
     private String category;
 
+    @Column(name = "meal_course", nullable = false, length = 50)
+    private String mealCourse;
+
+    @Column(name = "dietary_type", nullable = false, length = 50)
+    private String dietaryType;
+
     @Column(name = "price", nullable = false)
     private Double price;
 
