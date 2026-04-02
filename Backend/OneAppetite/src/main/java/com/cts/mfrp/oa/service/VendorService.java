@@ -1,6 +1,7 @@
 package com.cts.mfrp.oa.service;
 
 import com.cts.mfrp.oa.dto.response.VendorRegisterResponse;
+import com.cts.mfrp.oa.exception.ResourceNotFoundException;
 import com.cts.mfrp.oa.model.Building;
 import com.cts.mfrp.oa.model.Role;
 import com.cts.mfrp.oa.model.User;
@@ -30,7 +31,15 @@ public class VendorService {
                 null, // token can be set later if you generate JWTs
                 v.getVendorName(),
                 v.getVendorDescription(),
-                v.getBuilding().getBuildingId()
+                v.getBuilding().getBuildingId(),
+                v.getVendorImageUrl()
         )).toList();
+    }
+
+    public void updateVendorImage(Integer vendorId, String vendorImageUrl) {
+        User vendor = userRepo.findById(vendorId)
+                .orElseThrow(() -> new ResourceNotFoundException("Vendor not found with ID: " + vendorId));
+        vendor.setVendorImageUrl(vendorImageUrl);
+        userRepo.save(vendor);
     }
 }

@@ -47,6 +47,9 @@ public class User implements UserDetails {
     @Column(name = "vendor_description", length = 255)
     private String vendorDescription;
 
+    @Column(name = "vendor_image_url", length = 500)
+    private String vendorImageUrl;
+
     @Column(name = "is_active", nullable = false)
     private Boolean isActive = true;
 

@@ -15,7 +15,10 @@ public record VendorRegisterRequest(
         String phone,
 
         @NotBlank(message = "Password is required")
-        @Size(min = 8, message = "Password must be at least 8 characters")
+        @Pattern(
+                regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&]).{8,}$",
+                message = "Password must be at least 8 characters and include uppercase, lowercase, a digit, and a special character (@$!%*?&)"
+        )
         String password,
 
         @NotBlank(message = "Vendor name is required")
@@ -25,5 +28,7 @@ public record VendorRegisterRequest(
         String vendorDescription,
 
         @NotNull(message = "Building ID is required")
-        Integer buildingId
+        Integer buildingId,
+
+        String vendorImageUrl
 ) {}

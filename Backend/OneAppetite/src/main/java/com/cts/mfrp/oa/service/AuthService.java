@@ -102,6 +102,7 @@ public class AuthService {
         user.setPassword(passwordEncoder.encode(request.password()));
         user.setVendorName(request.vendorName());
         user.setVendorDescription(request.vendorDescription());
+        user.setVendorImageUrl(request.vendorImageUrl());
         user.setBuilding(building);
         user.setRole(Role.VENDOR);
         user.setIsActive(true);
@@ -118,7 +119,8 @@ public class AuthService {
                 token,
                 saved.getVendorName(),
                 saved.getVendorDescription(),
-                saved.getBuilding().getBuildingId()
+                saved.getBuilding().getBuildingId(),
+                saved.getVendorImageUrl()
         );
     }
 
