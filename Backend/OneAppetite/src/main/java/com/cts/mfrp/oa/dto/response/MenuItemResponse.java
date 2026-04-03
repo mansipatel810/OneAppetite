@@ -4,6 +4,8 @@ public record MenuItemResponse(
         Integer itemId,
         String itemName,
         String category,
+        String mealCourse,
+        String dietaryType,
         Double price,
         Integer quantityAvailable,
         Boolean isInStock,
@@ -11,4 +13,4 @@ public record MenuItemResponse(
         Integer vendorId,
         String vendorName,
         String vendorDescription
-) {}
+        ) {}

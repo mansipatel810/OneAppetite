@@ -30,6 +30,8 @@ public class MenuItemService {
                 item.getItemId(),
                 item.getItemName(),
                 item.getCategory(),
+                item.getMealCourse(),
+                item.getDietaryType(),
                 item.getPrice(),
                 item.getQuantityAvailable(),
                 item.getIsInStock(),
@@ -67,6 +69,8 @@ public class MenuItemService {
 
         existing.setItemName(updatedItem.getItemName());
         existing.setCategory(updatedItem.getCategory());
+        existing.setMealCourse(updatedItem.getMealCourse());
+        existing.setDietaryType(updatedItem.getDietaryType());
         existing.setPrice(updatedItem.getPrice());
         existing.setQuantityAvailable(updatedItem.getQuantityAvailable());
         existing.setIsInStock(updatedItem.getIsInStock());
