@@ -6,7 +6,6 @@ public record VendorRegisterResponse(
         String email,
         String phone,
         String role,
-        String token,
         String vendorName,
         String vendorDescription,
         Integer buildingId,

@@ -28,7 +28,6 @@ public class VendorService {
                 v.getEmail(),
                 v.getPhone(),
                 v.getRole().name(),
-                null, // token can be set later if you generate JWTs
                 v.getVendorName(),
                 v.getVendorDescription(),
                 v.getBuilding().getBuildingId(),
