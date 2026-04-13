@@ -42,4 +42,6 @@ public class MenuItem {
     @ManyToOne
     @JoinColumn(name = "vendor_id", nullable = false)
     private User vendor; // vendor is a User with Role.VENDOR
+
+    private Integer minPrepTime;
 }
