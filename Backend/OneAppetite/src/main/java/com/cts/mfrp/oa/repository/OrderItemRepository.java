@@ -1,4 +1,12 @@
 package com.cts.mfrp.oa.repository;
 
-public class OrderItemRepository {
+import com.cts.mfrp.oa.model.OrderItem;
+import org.springframework.data.jpa.repository.JpaRepository;
+import java.util.List;
+
+public interface OrderItemRepository extends JpaRepository<OrderItem, Integer> {
+    OrderItem findByOrder_OrderIdAndMenuItem_ItemId(Integer orderId, Integer itemId);
+
+    // Add this line to fetch all items for an order
+    List<OrderItem> findByOrder_OrderId(Integer orderId);
 }

@@ -1,4 +1,9 @@
 package com.cts.mfrp.oa.repository;
 
-public class OrderRepository {
+import com.cts.mfrp.oa.model.Order;
+import org.springframework.data.jpa.repository.JpaRepository;
+import java.util.Optional;
+
+public interface OrderRepository extends JpaRepository<Order, Integer> {
+    Optional<Order> findByUser_UserIdAndStatus(Integer userId, String status);
 }
