@@ -110,6 +110,19 @@ public class AuthService {
             throw new InvalidCredentialsException("Invalid email or password.");
         }
 
+        Role requestedRole;
+        try {
+            requestedRole = Role.valueOf(request.role().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new InvalidCredentialsException("Invalid role: " + request.role());
+        }
+
+        if (user.getRole() != requestedRole) {
+            throw new InvalidCredentialsException(
+                    "No " + requestedRole.name().toLowerCase() + " account found for this email. "
+                            + "Your account is registered as " + user.getRole().name().toLowerCase() + "."
+            );
+        }
         return new LoginResponse(user.getUserId(), user.getName(), user.getEmail(), user.getRole().name());
     }
 }
