@@ -1,0 +1,169 @@
+<div class="min-vh-100 d-flex align-items-center justify-content-center bg-light py-5">
+  <div class="w-100" style="max-width: 460px;">
+
+    <!-- Brand header -->
+    <div class="text-center mb-4">
+      <div class="d-inline-flex align-items-center gap-2 mb-1">
+        <span class="d-flex align-items-center justify-content-center rounded-circle bg-primary text-white"
+              style="width: 44px; height: 44px; font-size: 1.25rem;">
+          <i class="bi bi-cup-straw"></i>
+        </span>
+        <span class="fw-bold fs-3 text-primary">One Appetite</span>
+      </div>
+      <div class="mx-auto rounded-pill bg-primary" style="width: 48px; height: 4px;"></div>
+    </div>
+
+    <!-- Card -->
+    <div class="card shadow-sm border-0 rounded-4 px-4 py-4">
+      <div class="card-body">
+        <h4 class="fw-bold mb-1">Welcome Back</h4>
+        <p class="text-muted small mb-4">Sign in to your OneAppetite account.</p>
+
+        <!-- Registration success banner -->
+        @if (showRegisteredBanner()) {
+          <div class="alert alert-success d-flex align-items-start py-2 small" role="alert">
+            <i class="bi bi-check-circle-fill me-2 mt-1 flex-shrink-0"></i>
+            <span>Account created successfully! Please sign in.</span>
+          </div>
+        }
+
+        <!-- Server error alert -->
+        @if (serverError().length > 0) {
+          <div class="alert alert-danger d-flex align-items-start py-2 small" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2 mt-1 flex-shrink-0"></i>
+            <span>{{ serverError() }}</span>
+          </div>
+        }
+
+        <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" novalidate>
+
+          <!-- Email -->
+          <div class="mb-3">
+            <label for="email" class="form-label fw-semibold small">
+              Email <span class="text-danger">*</span>
+            </label>
+            <div class="input-group">
+              <span class="input-group-text bg-white"><i class="bi bi-envelope"></i></span>
+              <input
+                id="email"
+                type="email"
+                class="form-control"
+                formControlName="email"
+                placeholder="john.doe&#64;cognizant.com"
+                [class.is-invalid]="f['email'].touched && f['email'].invalid"
+              />
+              <div class="invalid-feedback">
+                @if (f['email'].errors?.['required']) {
+                  <span>Email is required.</span>
+                }
+                @if (f['email'].errors?.['email']) {
+                  <span>Email is not valid.</span>
+                }
+              </div>
+            </div>
+          </div>
+
+          <!-- Password -->
+          <div class="mb-3">
+            <label for="password" class="form-label fw-semibold small">
+              Password <span class="text-danger">*</span>
+            </label>
+            <div class="input-group">
+              <span class="input-group-text bg-white"><i class="bi bi-lock"></i></span>
+              <input
+                id="password"
+                [type]="showPassword ? 'text' : 'password'"
+                class="form-control"
+                formControlName="password"
+                placeholder="Enter your password"
+                [class.is-invalid]="f['password'].touched && f['password'].invalid"
+              />
+              <button
+                type="button"
+                class="btn btn-outline-secondary border-start-0"
+                (click)="togglePassword()"
+                tabindex="-1"
+                aria-label="Toggle password visibility"
+              >
+                <i [class]="showPassword ? 'bi bi-eye-slash' : 'bi bi-eye'"></i>
+              </button>
+              <div class="invalid-feedback">
+                @if (f['password'].errors?.['required']) {
+                  <span>Password is required.</span>
+                }
+                @if (f['password'].errors?.['minlength']) {
+                  <span>Must be at least 8 characters.</span>
+                }
+              </div>
+            </div>
+          </div>
+
+          <!-- Role toggle -->
+          <div class="mb-3">
+            <label class="form-label fw-semibold small">
+              Sign in as <span class="text-danger">*</span>
+            </label>
+            <div class="btn-group w-100" role="group" aria-label="Role selection">
+              @for (r of roles; track r) {
+                <button
+                  type="button"
+                  class="btn"
+                  [class.btn-primary]="f['role'].value === r"
+                  [class.btn-outline-secondary]="f['role'].value !== r"
+                  (click)="selectRole(r)"
+                >
+                  <i class="bi me-1"
+                     [class.bi-person-badge]="r === 'EMPLOYEE'"
+                     [class.bi-shop]="r === 'VENDOR'"
+                     [class.bi-shield-lock]="r === 'ADMIN'"
+                  ></i>
+                  {{ r | titlecase }}
+                </button>
+              }
+            </div>
+            @if (f['role'].touched && f['role'].invalid) {
+              <div class="text-danger small mt-1">Please select a role.</div>
+            }
+          </div>
+
+          <!-- Forgot Password -->
+          <div class="text-end mb-4">
+            <a href="#" class="small text-primary text-decoration-none fw-semibold">Forgot password?</a>
+          </div>
+
+          <!-- Submit -->
+          <button
+            type="submit"
+            class="btn btn-primary w-100 py-2 fw-semibold rounded-3"
+            [disabled]="isSubmitting()"
+          >
+            @if (isSubmitting()) {
+              <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+              Signing in...
+            } @else {
+              Sign In &rarr;
+            }
+          </button>
+        </form>
+
+        <p class="text-center text-muted small mt-3 mb-0">
+          Don't have an account?
+          <a routerLink="/register" class="text-primary fw-semibold text-decoration-none">Create Account</a>
+        </p>
+      </div>
+    </div>
+
+    <div class="text-center mt-3">
+      <small class="text-muted">
+        <a href="#" class="text-muted text-decoration-none text-uppercase me-2"
+           style="font-size: .7rem; letter-spacing: .5px;">Privacy Policy</a>
+        <span class="text-muted">&middot;</span>
+        <a href="#" class="text-muted text-decoration-none text-uppercase mx-2"
+           style="font-size: .7rem; letter-spacing: .5px;">Terms of Service</a>
+        <span class="text-muted">&middot;</span>
+        <a href="#" class="text-muted text-decoration-none text-uppercase ms-2"
+           style="font-size: .7rem; letter-spacing: .5px;">Help Center</a>
+      </small>
+    </div>
+  </div>
+</div>

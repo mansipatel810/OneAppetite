@@ -1,0 +1,65 @@
+<div class="min-vh-100 bg-light">
+
+  <!-- Top navbar -->
+  <nav class="navbar bg-white border-bottom px-4 py-2">
+    <div class="container-fluid">
+      <span class="navbar-brand fw-bold text-primary mb-0">
+        <i class="bi bi-cup-straw me-2"></i>One Appetite
+      </span>
+      <div class="d-flex align-items-center gap-3" *ngIf="user">
+        <span class="badge bg-primary bg-opacity-10 text-primary rounded-pill px-3 py-2 small">
+          {{ user.role | titlecase }}
+        </span>
+        <span class="small text-muted">{{ user.name }}</span>
+        <button
+          class="btn btn-outline-secondary btn-sm"
+          (click)="logout()"
+        >
+          <i class="bi bi-box-arrow-right me-1"></i> Logout
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main content -->
+  <div class="container py-5" *ngIf="user">
+    <div class="row justify-content-center">
+      <div class="col-lg-8">
+
+        <!-- Welcome card -->
+        <div class="card shadow-sm border-0 rounded-4 mb-4">
+          <div class="card-body p-4">
+            <div class="d-flex align-items-center gap-3 mb-3">
+              <div class="d-flex align-items-center justify-content-center rounded-circle bg-primary text-white"
+                   style="width: 56px; height: 56px; font-size: 1.5rem;">
+                {{ user.name.charAt(0) | uppercase }}
+              </div>
+              <div>
+                <h4 class="fw-bold mb-0">Welcome back, {{ user.name }}!</h4>
+                <p class="text-muted small mb-0">{{ user.email }}</p>
+              </div>
+            </div>
+
+            <div class="alert alert-success d-flex align-items-center py-2 small mb-0" role="alert">
+              <i class="bi bi-check-circle-fill me-2"></i>
+              You are logged in as <strong class="ms-1">{{ user.role }}</strong>
+              <span class="ms-1">(User ID: {{ user.userId }})</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Session data (debug) -->
+        <div class="card shadow-sm border-0 rounded-4">
+          <div class="card-body p-4">
+            <h6 class="fw-semibold text-muted mb-3">
+              <i class="bi bi-terminal me-1"></i> Session data (localStorage)
+            </h6>
+            <pre class="bg-light rounded-3 p-3 small mb-0"
+                 style="white-space: pre-wrap; word-break: break-word;">{{ user | json }}</pre>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
