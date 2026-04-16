@@ -10,7 +10,6 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/orders")
 public class OrderController {
-<<<<<<< HEAD
     @Autowired
     private OrderService orderService;
 
@@ -21,17 +20,6 @@ public class OrderController {
 
         // Simple notification (log for now)
         System.out.println("Employee notified: Order " + orderId + " moved to " + status);
-
-=======
-
-    @Autowired
-    private OrderService orderService;
-
-    @PutMapping("/{id}/status")
-    public ResponseEntity<Order> updateStatus(@PathVariable Long id,
-                                              @RequestParam OrderStatus status) {
-        Order updatedOrder = orderService.updateOrderStatus(id, status);
->>>>>>> 51ca6366f48c201655e89ee6b836107a5c8aeb83
         return ResponseEntity.ok(updatedOrder);
     }
 }
