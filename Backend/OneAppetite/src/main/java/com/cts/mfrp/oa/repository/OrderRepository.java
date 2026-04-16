@@ -7,4 +7,5 @@ import java.util.Optional;
 
 public interface OrderRepository extends JpaRepository<Order, Integer> {
     Optional<Order> findByUser_UserIdAndStatus(Integer userId, OrderStatus status);
+    boolean existsByTokenNumber(String tokenNumber);
 }
