@@ -23,7 +23,8 @@ public class Order {
     private User vendor;
 
     private String tokenNumber;
-    private String status; // "CART", "PENDING", etc.
+    @Enumerated(EnumType.STRING)
+    private OrderStatus status;
     private Float totalAmount;
 
     private LocalDateTime orderTime;

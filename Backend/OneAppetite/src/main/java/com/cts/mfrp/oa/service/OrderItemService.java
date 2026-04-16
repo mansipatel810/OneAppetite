@@ -48,8 +48,7 @@ public class OrderItemService {
 
                     // FIX: Set the Vendor ID from the MenuItem
                     newOrder.setVendor(item.getVendor());
-
-                    newOrder.setStatus("CART");
+                    newOrder.setStatus(OrderStatus.CART);
                     newOrder.setTotalAmount(0.0f);
                     newOrder.setOrderTime(LocalDateTime.now());
                     return orderRepo.save(newOrder);
