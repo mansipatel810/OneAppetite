@@ -1,6 +1,8 @@
 package com.cts.mfrp.oa.controller;
 
 import com.cts.mfrp.oa.dto.request.CartRequest;
+import com.cts.mfrp.oa.dto.response.CartResponseDTO;
+import com.cts.mfrp.oa.dto.response.OrderItemDTO;
 import com.cts.mfrp.oa.model.Order;
 import com.cts.mfrp.oa.model.OrderItem;
 import com.cts.mfrp.oa.service.OrderItemService;
@@ -17,7 +19,7 @@ public class OrderItemController {
     private OrderItemService service;
 
     @PostMapping("/add")
-    public ResponseEntity<OrderItem> add(@RequestBody CartRequest request) {
+    public ResponseEntity<OrderItemDTO> add(@RequestBody CartRequest request) {
         return ResponseEntity.ok(service.addProductToCart(request));
     }
 
@@ -33,7 +35,7 @@ public class OrderItemController {
     }
 
     @GetMapping("/view/{userId}")
-    public ResponseEntity<Order> getCart(@PathVariable Integer userId) {
+    public ResponseEntity<CartResponseDTO> getCart(@PathVariable Integer userId) {
         return ResponseEntity.ok(service.getActiveCart(userId));
     }
 }
