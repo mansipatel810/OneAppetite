@@ -15,7 +15,7 @@ public class Order {
     private Integer orderId;
 
     @ManyToOne
-    @JoinColumn(name = "employee_id") // Your ERD uses employee_id for the user
+    @JoinColumn(name = "employee_id") // ERD uses employee_id for the user
     private User user;
 
     @ManyToOne
