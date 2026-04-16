@@ -48,7 +48,13 @@ public class AuthService {
         user.setEmail(request.email());
         user.setPhone(request.phone());
         user.setPassword(BCrypt.hashpw(request.password(), BCrypt.gensalt()));
-        user.setRole(Role.EMPLOYEE);
+        if (request.role() != null && request.role().equalsIgnoreCase("VENDOR")) {
+            throw new InvalidCredentialsException("Vendor registration requires /api/auth/register/vendor endpoint.");
+        } else if (request.role() != null && request.role().equalsIgnoreCase("ADMIN")) {
+            user.setRole(Role.ADMIN);
+        } else {
+            user.setRole(Role.EMPLOYEE);
+        }
         user.setIsActive(true);
 
         User saved = userRepository.save(user);
@@ -58,7 +64,8 @@ public class AuthService {
                 saved.getName(),
                 saved.getEmail(),
                 saved.getPhone(),
-                saved.getRole().name()
+                saved.getRole().name(),
+                saved.getIsActive()
         );
     }
 

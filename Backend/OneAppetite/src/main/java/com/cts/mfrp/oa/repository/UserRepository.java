@@ -16,4 +16,6 @@ public interface UserRepository extends JpaRepository<User, Integer> {
 
     // Custom query to fetch vendors by building
     List<User> findByBuildingAndRole(Building building, Role role);
+
+    List<User> findByRole(Role role);
 }
