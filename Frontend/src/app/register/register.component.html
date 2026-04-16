@@ -1,0 +1,294 @@
+<div class="min-vh-100 d-flex align-items-center justify-content-center bg-light py-5">
+  <div class="w-100" style="max-width: 480px;">
+
+    <!-- Brand header -->
+    <div class="text-center mb-4">
+      <div class="d-inline-flex align-items-center gap-2 mb-1">
+        <span class="d-flex align-items-center justify-content-center rounded-circle bg-primary text-white"
+              style="width: 44px; height: 44px; font-size: 1.25rem;">
+          <i class="bi bi-cup-straw"></i>
+        </span>
+        <span class="fw-bold fs-3 text-primary">One Appetite</span>
+      </div>
+      <div class="mx-auto rounded-pill bg-primary" style="width: 48px; height: 4px;"></div>
+    </div>
+
+    <!-- Card -->
+    <div class="card shadow-sm border-0 rounded-4 px-4 py-4">
+      <div class="card-body">
+        <h4 class="fw-bold mb-1">Create Account</h4>
+        <p class="text-muted small mb-4">Join the OneAppetite corporate cafeteria network.</p>
+
+        <!-- Server error alert (400 / 409 backend messages) -->
+        @if (serverError().length > 0) {
+          <div
+            #errorAlert
+            class="alert alert-danger d-flex align-items-start py-2 small"
+            role="alert"
+          >
+            <i class="bi bi-exclamation-triangle-fill me-2 mt-1 flex-shrink-0"></i>
+            <span>{{ serverError() }}</span>
+          </div>
+        }
+
+        <form [formGroup]="registerForm" (ngSubmit)="onSubmit()" novalidate>
+
+          <!-- Role toggle -->
+          <div class="mb-4">
+            <label class="form-label fw-semibold small">
+              I am signing up as <span class="text-danger">*</span>
+            </label>
+            <div class="btn-group w-100" role="group" aria-label="Role selection">
+              @for (r of roles; track r) {
+                <button
+                  type="button"
+                  class="btn"
+                  [class.btn-primary]="f['role'].value === r"
+                  [class.btn-outline-secondary]="f['role'].value !== r"
+                  (click)="selectRole(r)"
+                >
+                  <i class="bi me-1"
+                     [class.bi-person-badge]="r === 'EMPLOYEE'"
+                     [class.bi-shop]="r === 'VENDOR'"
+                     [class.bi-shield-lock]="r === 'ADMIN'"
+                  ></i>
+                  {{ r | titlecase }}
+                </button>
+              }
+            </div>
+            @if (f['role'].touched && f['role'].invalid) {
+              <div class="text-danger small mt-1">Please select a role.</div>
+            }
+          </div>
+
+          <!-- Full Name -->
+          <div class="mb-3">
+            <label for="fullName" class="form-label fw-semibold small">
+              Full Name <span class="text-danger">*</span>
+            </label>
+            <div class="input-group">
+              <span class="input-group-text bg-white"><i class="bi bi-person"></i></span>
+              <input
+                id="fullName"
+                type="text"
+                class="form-control"
+                formControlName="fullName"
+                placeholder="John Doe"
+                [class.is-invalid]="f['fullName'].touched && f['fullName'].invalid"
+              />
+              <div class="invalid-feedback">
+                @if (f['fullName'].errors?.['required']) {
+                  <span>Full name is required.</span>
+                }
+                @if (f['fullName'].errors?.['minlength']) {
+                  <span>Must be at least 2 characters.</span>
+                }
+              </div>
+            </div>
+          </div>
+
+          <!-- Work Email -->
+          <div class="mb-3">
+            <label for="email" class="form-label fw-semibold small">
+              Work Email <span class="text-danger">*</span>
+            </label>
+            <div class="input-group">
+              <span class="input-group-text bg-white"><i class="bi bi-envelope"></i></span>
+              <input
+                id="email"
+                type="email"
+                class="form-control"
+                formControlName="email"
+                placeholder="john.doe&#64;cognizant.com"
+                [class.is-invalid]="f['email'].touched && f['email'].invalid"
+              />
+              <div class="invalid-feedback">
+                @if (f['email'].errors?.['required']) {
+                  <span>Email is required.</span>
+                }
+                @if (f['email'].errors?.['email']) {
+                  <span>Email is not valid.</span>
+                }
+              </div>
+            </div>
+          </div>
+
+          <!-- Phone Number -->
+          <div class="mb-3">
+            <label for="phoneNumber" class="form-label fw-semibold small">
+              Phone Number <span class="text-danger">*</span>
+            </label>
+            <div class="input-group">
+              <span class="input-group-text bg-white"><i class="bi bi-telephone"></i></span>
+              <input
+                id="phoneNumber"
+                type="tel"
+                class="form-control"
+                formControlName="phoneNumber"
+                placeholder="1234567890"
+                maxlength="10"
+                [class.is-invalid]="f['phoneNumber'].touched && f['phoneNumber'].invalid"
+              />
+              <div class="invalid-feedback">
+                @if (f['phoneNumber'].errors?.['required']) {
+                  <span>Phone number is required.</span>
+                }
+                @if (f['phoneNumber'].errors?.['pattern']) {
+                  <span>Invalid format. Must be 10 digits.</span>
+                }
+              </div>
+            </div>
+          </div>
+
+          <!-- Password -->
+          <div class="mb-3">
+            <label for="password" class="form-label fw-semibold small">
+              Password <span class="text-danger">*</span>
+            </label>
+            <div class="input-group">
+              <span class="input-group-text bg-white"><i class="bi bi-lock"></i></span>
+              <input
+                id="password"
+                [type]="showPassword ? 'text' : 'password'"
+                class="form-control"
+                formControlName="password"
+                placeholder="Min. 8 characters"
+                [class.is-invalid]="f['password'].touched && f['password'].invalid"
+              />
+              <button
+                type="button"
+                class="btn btn-outline-secondary border-start-0"
+                (click)="togglePassword()"
+                tabindex="-1"
+                aria-label="Toggle password visibility"
+              >
+                <i [class]="showPassword ? 'bi bi-eye-slash' : 'bi bi-eye'"></i>
+              </button>
+              <div class="invalid-feedback">
+                @if (f['password'].errors?.['required']) {
+                  <span>Password is required.</span>
+                }
+                @if (f['password'].errors?.['minlength']) {
+                  <span>Must be at least 8 characters.</span>
+                }
+              </div>
+            </div>
+          </div>
+
+          <!-- Vendor-only fields -->
+          @if (isVendor) {
+            <hr class="my-3" />
+            <p class="fw-semibold small text-primary mb-3">
+              <i class="bi bi-shop me-1"></i> Vendor details
+            </p>
+
+            <div class="mb-3">
+              <label for="vendorName" class="form-label fw-semibold small">
+                Vendor / Stall Name <span class="text-danger">*</span>
+              </label>
+              <div class="input-group">
+                <span class="input-group-text bg-white"><i class="bi bi-shop-window"></i></span>
+                <input
+                  id="vendorName"
+                  type="text"
+                  class="form-control"
+                  formControlName="vendorName"
+                  placeholder="e.g. Grill Masters"
+                  [class.is-invalid]="f['vendorName'].touched && f['vendorName'].invalid"
+                />
+                <div class="invalid-feedback">
+                  @if (f['vendorName'].errors?.['required']) {
+                    <span>Vendor name is required.</span>
+                  }
+                  @if (f['vendorName'].errors?.['minlength']) {
+                    <span>Must be at least 2 characters.</span>
+                  }
+                </div>
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label for="vendorDescription" class="form-label fw-semibold small">
+                Description <span class="text-danger">*</span>
+              </label>
+              <textarea
+                id="vendorDescription"
+                class="form-control"
+                formControlName="vendorDescription"
+                rows="3"
+                placeholder="Brief description of your cuisine and specialties..."
+                [class.is-invalid]="f['vendorDescription'].touched && f['vendorDescription'].invalid"
+              ></textarea>
+              <div class="invalid-feedback">
+                @if (f['vendorDescription'].errors?.['required']) {
+                  <span>Description is required.</span>
+                }
+                @if (f['vendorDescription'].errors?.['minlength']) {
+                  <span>Must be at least 10 characters.</span>
+                }
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label for="buildingId" class="form-label fw-semibold small">
+                Building ID <span class="text-danger">*</span>
+              </label>
+              <div class="input-group">
+                <span class="input-group-text bg-white"><i class="bi bi-building"></i></span>
+                <input
+                  id="buildingId"
+                  type="number"
+                  class="form-control"
+                  formControlName="buildingId"
+                  placeholder="e.g. 1"
+                  min="1"
+                  [class.is-invalid]="f['buildingId'].touched && f['buildingId'].invalid"
+                />
+                <div class="invalid-feedback">
+                  @if (f['buildingId'].errors?.['required']) {
+                    <span>Building ID is required.</span>
+                  }
+                  @if (f['buildingId'].errors?.['min']) {
+                    <span>Must be at least 1.</span>
+                  }
+                </div>
+              </div>
+            </div>
+          }
+
+          <!-- Submit -->
+          <button
+            type="submit"
+            class="btn btn-primary w-100 py-2 fw-semibold rounded-3 mt-2"
+            [disabled]="isSubmitting()"
+          >
+            @if (isSubmitting()) {
+              <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+              Creating Account...
+            } @else {
+              Create Account &rarr;
+            }
+          </button>
+        </form>
+
+        <p class="text-center text-muted small mt-3 mb-0">
+          Already have an account?
+          <a routerLink="/login" class="text-primary fw-semibold text-decoration-none">Log in</a>
+        </p>
+      </div>
+    </div>
+
+    <div class="text-center mt-3">
+      <small class="text-muted">
+        <a href="#" class="text-muted text-decoration-none text-uppercase me-2"
+           style="font-size: .7rem; letter-spacing: .5px;">Privacy Policy</a>
+        <span class="text-muted">&middot;</span>
+        <a href="#" class="text-muted text-decoration-none text-uppercase mx-2"
+           style="font-size: .7rem; letter-spacing: .5px;">Terms of Service</a>
+        <span class="text-muted">&middot;</span>
+        <a href="#" class="text-muted text-decoration-none text-uppercase ms-2"
+           style="font-size: .7rem; letter-spacing: .5px;">Help Center</a>
+      </small>
+    </div>
+  </div>
+</div>
