@@ -1,8 +1,10 @@
 package com.cts.mfrp.oa.dto.request;
 
-public record CartRequest(
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotNull;
 
-        Integer userId,
-        Integer menuItemId,
-        Integer quantity
+public record CartRequest(
+        @NotNull Integer userId,
+        @NotNull Integer menuItemId,
+        @Min(1) Integer quantity
 ) {}
