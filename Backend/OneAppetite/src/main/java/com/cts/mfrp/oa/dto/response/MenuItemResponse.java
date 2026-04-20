@@ -12,5 +12,6 @@ public record MenuItemResponse(
         String imageUrl,
         Integer vendorId,
         String vendorName,
-        String vendorDescription
+        String vendorDescription,
+        String vendorType
         ) {}

@@ -96,7 +96,7 @@ public class OrderItemService {
         User v = order.getVendor();
         VendorDTO vendorDTO = new VendorDTO(
                 v.getUserId(), v.getName(), v.getEmail(),
-                v.getPhone(), v.getIsActive(), v.getVendorName()
+                v.getPhone(), v.getIsActive(), v.getVendorName(),v.getVendorType()
         );
 
         List<OrderItemDTO> itemDTOs = order.getOrderItems().stream()
@@ -122,7 +122,7 @@ public class OrderItemService {
         User v = entity.getMenuItem().getVendor();
         VendorDTO vendorDTO = new VendorDTO(
                 v.getUserId(), v.getName(), v.getEmail(),
-                v.getPhone(), v.getIsActive(), v.getVendorName()
+                v.getPhone(), v.getIsActive(), v.getVendorName(),v.getVendorType()
         );
 
         MenuItem m = entity.getMenuItem();
