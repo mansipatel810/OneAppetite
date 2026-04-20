@@ -105,7 +105,8 @@ public class AuthService {
                 saved.getVendorName(),
                 saved.getVendorDescription(),
                 saved.getBuilding().getBuildingId(),
-                saved.getVendorImageUrl()
+                saved.getVendorImageUrl(),
+                saved.getVendorType()
         );
     }
 

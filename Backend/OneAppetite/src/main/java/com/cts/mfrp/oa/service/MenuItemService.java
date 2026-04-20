@@ -38,7 +38,8 @@ public class MenuItemService {
                 item.getImageUrl(),
                 item.getVendor().getUserId(),
                 item.getVendor().getVendorName(),
-                item.getVendor().getVendorDescription()
+                item.getVendor().getVendorDescription(),
+                item.getVendor().getVendorType()
         );
     }
 
