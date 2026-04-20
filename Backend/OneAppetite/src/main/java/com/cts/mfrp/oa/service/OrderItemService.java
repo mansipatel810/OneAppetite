@@ -17,6 +17,7 @@ public class OrderItemService {
     @Autowired private OrderItemRepository itemRepo;
     @Autowired private MenuItemRepository menuRepo;
     @Autowired private UserRepository userRepo;
+    @Autowired private WalletService walletService;
 
     @Transactional
     public OrderItem addProductToCart(CartRequest request) {
@@ -158,5 +159,26 @@ public class OrderItemService {
     public Order getActiveCart(Integer userId) {
         return orderRepo.findByUser_UserIdAndStatus(userId, "CART")
                 .orElseThrow(() -> new RuntimeException("No active cart found for user ID: " + userId));
+    }
+
+    public List<Order> getOrderHistory(Integer userId) {
+        return orderRepo.findByUser_UserIdAndStatusNotOrderByOrderTimeDesc(userId, "CART");
+    }
+
+    @Transactional
+    public Order placeOrder(Integer userId) {
+        Order cart = orderRepo.findByUser_UserIdAndStatus(userId, "CART")
+                .orElseThrow(() -> new RuntimeException("No active cart found for user ID: " + userId));
+
+        Float total = cart.getTotalAmount();
+        if (total == null || total <= 0f) {
+            throw new RuntimeException("Cart is empty.");
+        }
+
+        walletService.debit(userId, total.doubleValue());
+
+        cart.setStatus("PLACED");
+        cart.setOrderTime(LocalDateTime.now());
+        return orderRepo.save(cart);
     }
 }

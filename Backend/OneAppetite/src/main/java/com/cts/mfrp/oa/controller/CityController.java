@@ -10,7 +10,6 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/cities")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
 public class CityController {
     private final LocationService locationService;
 

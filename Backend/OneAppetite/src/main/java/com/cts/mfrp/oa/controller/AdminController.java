@@ -9,7 +9,6 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/admin")
-@CrossOrigin(origins = "*")
 public class AdminController {
 
     private final AdminService adminService;
@@ -19,17 +18,24 @@ public class AdminController {
     }
 
     @GetMapping("/vendors")
-    public ResponseEntity<List<UserResponse>> getAllVendors() {
+    public ResponseEntity<List<UserResponse>> getAllVendors(
+            @RequestHeader(value = "X-User-Id", required = false) Integer callerId) {
+        adminService.verifyAdmin(callerId);
         return ResponseEntity.ok(adminService.getAllVendors());
     }
 
     @GetMapping("/employees")
-    public ResponseEntity<List<UserResponse>> getAllEmployees() {
+    public ResponseEntity<List<UserResponse>> getAllEmployees(
+            @RequestHeader(value = "X-User-Id", required = false) Integer callerId) {
+        adminService.verifyAdmin(callerId);
         return ResponseEntity.ok(adminService.getAllEmployees());
     }
 
     @PutMapping("/users/{userId}/toggle-status")
-    public ResponseEntity<UserResponse> toggleUserStatus(@PathVariable Integer userId) {
+    public ResponseEntity<UserResponse> toggleUserStatus(
+            @RequestHeader(value = "X-User-Id", required = false) Integer callerId,
+            @PathVariable Integer userId) {
+        adminService.verifyAdmin(callerId);
         return ResponseEntity.ok(adminService.toggleUserStatus(userId));
     }
 }
