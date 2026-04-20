@@ -15,7 +15,7 @@ public class Order {
     private Integer orderId;
 
     @ManyToOne
-    @JoinColumn(name = "employee_id") // Your ERD uses employee_id for the user
+    @JoinColumn(name = "employee_id") // ERD uses employee_id for the user
     private User user;
 
     @ManyToOne
@@ -23,7 +23,8 @@ public class Order {
     private User vendor;
 
     private String tokenNumber;
-    private String status; // "CART", "PENDING", etc.
+    @Enumerated(EnumType.STRING)
+    private OrderStatus status;
     private Float totalAmount;
 
     private LocalDateTime orderTime;
@@ -34,3 +35,5 @@ public class Order {
     private List<OrderItem> orderItems;
 
 }
+
+

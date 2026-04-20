@@ -1,14 +1,11 @@
 package com.cts.mfrp.oa.dto.response;
 
-public record VendorRegisterResponse(
+public record VendorDTO(
         Integer userId,
         String name,
         String email,
         String phone,
-        String role,
+        Boolean isActive,
         String vendorName,
-        String vendorDescription,
-        Integer buildingId,
-        String vendorImageUrl,
         String vendorType
 ) {}
