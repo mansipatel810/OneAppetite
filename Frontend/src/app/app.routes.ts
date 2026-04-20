@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 import { LoginComponent } from './login/login.component';
 import { RegisterComponent } from './register/register.component';
 import { DashboardComponent } from './dashboard/dashboard.component';
+import { VendorKanbanComponent } from './vendor-kanban/vendor-kanban.component';
 
 export const routes: Routes = [
   { path: 'login', component: LoginComponent },
@@ -11,7 +12,7 @@ export const routes: Routes = [
   // Replace with role-specific components when ready.
   { path: 'dashboard', component: DashboardComponent },
   { path: 'admin/dashboard', component: DashboardComponent },
-  { path: 'vendor/dashboard', component: DashboardComponent },
+  { path: 'vendor/dashboard', component: VendorKanbanComponent },
 
   // Default redirect
   { path: '', redirectTo: 'login', pathMatch: 'full' },
