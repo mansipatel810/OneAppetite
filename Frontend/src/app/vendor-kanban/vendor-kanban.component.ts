@@ -1,6 +1,7 @@
-import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { Router } from '@angular/router';
+import { PLATFORM_ID, Inject } from '@angular/core';
 import { AuthService } from '../services/auth.service';
 import { OrderService, VendorOrder } from '../services/order.service';
 
@@ -26,10 +27,14 @@ export class VendorKanbanComponent implements OnInit {
   constructor(
     private authService: AuthService,
     private orderService: OrderService,
-    private router: Router
+    private router: Router,
+    private cdr: ChangeDetectorRef,
+    @Inject(PLATFORM_ID) private platformId: Object
   ) {}
 
   ngOnInit(): void {
+    if (!isPlatformBrowser(this.platformId)) return;
+
     const session = this.authService.getSession();
     if (!session || session.role !== 'VENDOR') {
       this.router.navigate(['/login']);
@@ -48,10 +53,12 @@ export class VendorKanbanComponent implements OnInit {
           this.ordersByStatus[col.status] = orders.filter(o => o.status === col.status);
         });
         this.loading = false;
+        this.cdr.detectChanges();
       },
       error: () => {
         this.error = 'Failed to load orders.';
         this.loading = false;
+        this.cdr.detectChanges();
       }
     });
   }
