@@ -1,7 +1,8 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject, PLATFORM_ID } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
 import { catchError, tap } from 'rxjs/operators';
+import { isPlatformBrowser } from '@angular/common';
 
 /* ──────────────────────────── Types ──────────────────────────── */
 
@@ -50,6 +51,9 @@ export interface RegisterResponse {
 export class AuthService {
   private readonly API_BASE = '/api/auth';
 
+  private platformId = inject(PLATFORM_ID);
+  private isBrowser  = isPlatformBrowser(this.platformId);
+
   constructor(private http: HttpClient) {}
 
   /* ── Register (Employee / Admin) ── */
@@ -91,19 +95,23 @@ export class AuthService {
   /* ── Session helpers ── */
 
   storeSession(data: LoginResponse): void {
+    if (!this.isBrowser) return;
     localStorage.setItem('oa_user', JSON.stringify(data));
   }
 
   getSession(): LoginResponse | null {
+    if (!this.isBrowser) return null;
     const raw = localStorage.getItem('oa_user');
     return raw ? (JSON.parse(raw) as LoginResponse) : null;
   }
 
   clearSession(): void {
+    if (!this.isBrowser) return;
     localStorage.removeItem('oa_user');
   }
 
   isLoggedIn(): boolean {
+    if (!this.isBrowser) return false;
     return !!localStorage.getItem('oa_user');
   }
 
@@ -123,18 +131,12 @@ export class AuthService {
 
     if (err.error) {
       if (typeof err.error === 'string') {
-        // Plain string error body
         userMessage = err.error;
       } else if (err.error.message) {
-        // { message: "Email already registered: x@y.com" }
         userMessage = err.error.message;
       } else if (err.error.error) {
-        // { error: "Email domain not allowed. Use a corporate email." }
-        // — Spring Boot sometimes uses "error" as the key
         userMessage = err.error.error;
       } else if (typeof err.error === 'object') {
-        // { name: "Name is required", phone: "Phone is required" }
-        // — @Valid field-level errors returned as a flat map
         const fieldErrors = Object.values(err.error).filter(
           (v) => typeof v === 'string'
         );
@@ -144,7 +146,6 @@ export class AuthService {
       }
     }
 
-    // Provide clear fallback messages for common status codes
     if (userMessage === 'Something went wrong. Please try again.') {
       if (err.status === 409) {
         userMessage = 'Email already registered';

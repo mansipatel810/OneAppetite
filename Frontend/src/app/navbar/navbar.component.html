@@ -1,0 +1,34 @@
+<!-- navbar.component.html -->
+
+<!-- ── Desktop Topbar ────────────────────────────────────────── -->
+<header class="topbar">
+  <!-- Left side intentionally empty — back button lives in each page's header -->
+  <div class="topbar-left"></div>
+
+  <div class="topbar-right">
+    <span class="role-pill" *ngIf="user">{{ user.role }}</span>
+
+    <div class="search-pill">
+      <i class="bi bi-search"></i>
+      <input type="text" placeholder="Search stalls..." />
+    </div>
+
+    <i class="bi bi-bell topbar-icon"></i>
+    <div class="avatar-circle">{{ user?.name | slice:0:2 | uppercase }}</div>
+  </div>
+</header>
+
+<!-- ── Mobile Topbar ─────────────────────────────────────────── -->
+<div class="mobile-topbar">
+  <div class="mobile-nav-logo">
+    <div class="logo-mark"><i class="bi bi-geo-fill"></i></div>
+    <span class="logo-text">One Appetite</span>
+  </div>
+  <div class="mobile-nav-right">
+    <i class="bi bi-bell topbar-icon"></i>
+    <div class="avatar-circle">{{ user?.name | slice:0:2 | uppercase }}</div>
+    <button class="hamburger" (click)="hamburgerClick()">
+      <i class="bi bi-list"></i>
+    </button>
+  </div>
+</div>
