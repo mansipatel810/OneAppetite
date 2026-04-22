@@ -1,0 +1,173 @@
+<!-- menu.component.html -->
+<div class="menu-page">
+
+  <!-- ── Page Header ──────────────────────────────────────────── -->
+  <!-- Single back button inline with the title. No separate topbar button. -->
+  <div class="menu-header">
+    <div class="menu-header-left">
+      <button class="back-btn-inline" (click)="goBack()" title="Back to Vendor List">
+        <i class="bi bi-arrow-left"></i>
+      </button>
+      <div class="menu-header-text">
+        <h1 class="menu-title">
+          {{ vendorName || 'Vendor Menu' }}<span class="menu-title-em"> · Menu</span>
+        </h1>
+        <p class="menu-subtitle" *ngIf="vendorDescription">{{ vendorDescription }}</p>
+        <p class="menu-subtitle" *ngIf="!vendorDescription && !isLoading">
+          {{ filteredItems.length }} item{{ filteredItems.length !== 1 ? 's' : '' }} available today
+        </p>
+      </div>
+    </div>
+
+    <!-- Desktop cart pill — only shown when there are items -->
+    <a class="cart-pill" routerLink="/cart" *ngIf="cartCount > 0">
+      <i class="bi bi-bag-fill"></i>
+      <span>{{ cartCount }} item{{ cartCount !== 1 ? 's' : '' }}</span>
+      <span class="cart-pill-sep">·</span>
+      <span>₹{{ cartTotal.toFixed(2) }}</span>
+      <i class="bi bi-arrow-right" style="font-size:11px;opacity:0.7"></i>
+    </a>
+  </div>
+
+  <!-- ── Single scrollable filter row ─────────────────────────── -->
+  <div class="filter-scroll-row">
+    <span class="filter-divider-label">Meal</span>
+
+    <button
+      *ngFor="let course of mealCourses"
+      class="filter-chip"
+      [class.active]="activeMealCourse === course"
+      (click)="setMealCourse(course)"
+    >
+      <ng-container [ngSwitch]="course">
+        <i *ngSwitchCase="'Breakfast'" class="bi bi-sunrise"></i>
+        <i *ngSwitchCase="'Lunch'"     class="bi bi-brightness-high"></i>
+        <i *ngSwitchCase="'Dinner'"    class="bi bi-moon-stars"></i>
+        <i *ngSwitchDefault            class="bi bi-grid-3x3-gap"></i>
+      </ng-container>
+      {{ course }}
+    </button>
+
+    <span class="filter-sep">|</span>
+    <span class="filter-divider-label">Category</span>
+
+    <button
+      *ngFor="let cat of categories"
+      class="filter-chip"
+      [class.active]="activeCategory === cat"
+      (click)="setCategory(cat)"
+    >{{ cat }}</button>
+  </div>
+
+  <!-- ── Search ────────────────────────────────────────────────── -->
+  <div class="search-row">
+    <div class="search-box">
+      <i class="bi bi-search"></i>
+      <input type="text" placeholder="Search menu items…" (input)="onSearch($event)" />
+    </div>
+    <span class="results-count" *ngIf="!isLoading">
+      {{ filteredItems.length }} result{{ filteredItems.length !== 1 ? 's' : '' }}
+    </span>
+  </div>
+
+  <!-- ── Loading Skeleton ───────────────────────────────────────── -->
+  <div class="skeleton-grid" *ngIf="isLoading">
+    <div class="skeleton-card" *ngFor="let _ of [1,2,3,4,5,6]">
+      <div class="sk sk-img"></div>
+      <div class="sk-body">
+        <div class="sk sk-title"></div>
+        <div class="sk sk-line"></div>
+        <div class="sk sk-btn"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Error ─────────────────────────────────────────────────── -->
+  <div class="empty-state" *ngIf="hasError && !isLoading">
+    <i class="bi bi-wifi-off empty-icon"></i>
+    <h3>Couldn't load the menu</h3>
+    <p>Check your connection or try again.</p>
+  </div>
+
+  <!-- ── No Results ────────────────────────────────────────────── -->
+  <div class="empty-state" *ngIf="!isLoading && !hasError && filteredItems.length === 0">
+    <i class="bi bi-search empty-icon"></i>
+    <h3>No items found</h3>
+    <p>Try a different filter or search term.</p>
+  </div>
+
+  <!-- ── Menu Grid ─────────────────────────────────────────────── -->
+  <div class="menu-grid" *ngIf="!isLoading && !hasError && filteredItems.length > 0">
+    <div class="menu-card" *ngFor="let item of filteredItems" [class.out-of-stock]="!item.isInStock">
+
+      <div class="dietary-badge" *ngIf="item.dietaryType">
+        <span class="diet-dot" [class.veg]="isVeg(item)" [class.non-veg]="isNonVeg(item)"></span>
+        <span class="diet-label" [class.veg-label]="isVeg(item)" [class.non-veg-label]="isNonVeg(item)">
+          {{ isVeg(item) ? 'Veg' : 'Non-Veg' }}
+        </span>
+      </div>
+
+      <div class="card-img-wrap">
+        <img *ngIf="item.imageUrl" [src]="item.imageUrl" [alt]="item.itemName" />
+        <div *ngIf="!item.imageUrl" class="card-img-placeholder"><i class="bi bi-egg-fried"></i></div>
+        <div class="out-of-stock-overlay" *ngIf="!item.isInStock"><span>Out of Stock</span></div>
+      </div>
+
+      <div class="card-body">
+        <div class="card-meta">
+          <span class="item-category">{{ item.category }}</span>
+          <span class="item-prep-time" *ngIf="item.minPrepTime">
+            <i class="bi bi-clock"></i> {{ item.minPrepTime }} min
+          </span>
+        </div>
+        <h3 class="item-name">{{ item.itemName }}</h3>
+        <p class="item-desc" *ngIf="item.description">{{ item.description }}</p>
+
+        <div class="card-footer">
+          <span class="item-price">₹{{ item.price | number:'1.2-2' }}</span>
+
+          <button
+            class="add-btn"
+            *ngIf="qtyOf(item.itemId) === 0"
+            [disabled]="!item.isInStock"
+            (click)="addToCart(item)"
+          >
+            <i class="bi bi-plus-lg"></i> Add
+          </button>
+
+          <div class="qty-stepper" *ngIf="qtyOf(item.itemId) > 0">
+            <button class="stepper-btn" (click)="removeFromCart(item)">
+              <i class="bi bi-dash-lg"></i>
+            </button>
+            <span class="qty-count">{{ qtyOf(item.itemId) }}</span>
+            <button class="stepper-btn stepper-plus" (click)="addToCart(item)" [disabled]="!item.isInStock">
+              <i class="bi bi-plus-lg"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── Sticky Cart Snackbar (mobile) ─────────────────────────── -->
+  <div class="sticky-cart-bar" *ngIf="cartCount > 0">
+    <div class="sticky-cart-info">
+      <span class="sticky-cart-count">{{ cartCount }} item{{ cartCount !== 1 ? 's' : '' }} added</span>
+      <span class="sticky-cart-total">₹{{ cartTotal.toFixed(2) }}</span>
+    </div>
+    <a class="sticky-cart-btn" routerLink="/cart">
+      View Cart <i class="bi bi-arrow-right"></i>
+    </a>
+  </div>
+
+  <footer class="app-footer">
+    <span>© 2026 One Appetite. Corporate Cafeteria Solutions.</span>
+    <div class="footer-links">
+      <a href="#">Support</a>
+      <a href="#">Terms of Service</a>
+      <a href="#">Privacy Policy</a>
+    </div>
+  </footer>
+
+</div>
