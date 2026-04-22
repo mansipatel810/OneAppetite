@@ -1,0 +1,56 @@
+/* app.component.css
+   ──────────────────────────────────────────────────────────────
+   Shell layout rules.
+   Key scroll contract:
+     • .app-shell          → overflow: hidden  (never scrolls)
+     • app-sidebar/.sidebar → overflow-y: auto  (internal nav scroll only)
+     • .main-content        → overflow: hidden  (never scrolls)
+     • .page-container      → overflow-y: auto  (THE ONLY scrolling region)
+   ──────────────────────────────────────────────────────────────
+*/
+
+*, *::before, *::after { box-sizing: border-box; }
+
+/* Remove any default margin/padding that could cause unwanted scroll */
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow: hidden;   /* prevent body scroll — page-container handles it */
+  font-family: 'Inter', system-ui, sans-serif;
+  background: #f5f5f4;
+}
+
+/* ── App Shell ────────────────────────────────────────────────── */
+.app-shell {
+  display: flex;
+  height: 100vh;
+  height: 100dvh;     /* use dynamic viewport on mobile */
+  overflow: hidden;   /* ← critical: no shell-level scroll */
+  background: #f5f5f4;
+  position: relative;
+}
+
+/* ── Right column ────────────────────────────────────────────── */
+.main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;   /* ← critical: topbar stays pinned */
+  min-width: 0;       /* prevent flex blowout */
+}
+
+/* ── Scrolling region ────────────────────────────────────────── */
+.page-container {
+  flex: 1;
+  overflow-y: auto;   /* ← THE ONLY element that scrolls */
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch; /* smooth momentum scroll on iOS */
+}
+
+/* ── Mobile: push content below fixed mobile topbar ─────────── */
+@media (max-width: 768px) {
+  .main-content {
+    padding-top: 56px; /* height of the fixed mobile topbar in navbar.component.css */
+  }
+}

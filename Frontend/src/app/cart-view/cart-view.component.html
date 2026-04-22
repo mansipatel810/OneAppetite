@@ -1,0 +1,128 @@
+<!-- cart-view.component.html -->
+<div class="cart-page">
+
+  <!-- ── Header ───────────────────────────────────────────────── -->
+  <div class="cart-header">
+    <button class="back-btn-inline" (click)="goBack()">
+      <i class="bi bi-arrow-left"></i>
+    </button>
+    <div>
+      <h1 class="cart-title">Your Cart</h1>
+      <p class="cart-subtitle" *ngIf="!isEmpty && !isLoading">
+        {{ items.length }} item{{ items.length !== 1 ? 's' : '' }} from
+        <strong>{{ vendorName }}</strong>
+      </p>
+    </div>
+  </div>
+
+  <!-- ── Loading ───────────────────────────────────────────────── -->
+  <div class="cart-skeleton" *ngIf="isLoading">
+    <div class="sk-row" *ngFor="let _ of [1,2,3]">
+      <div class="sk sk-thumb"></div>
+      <div class="sk-lines">
+        <div class="sk sk-l1"></div>
+        <div class="sk sk-l2"></div>
+      </div>
+      <div class="sk sk-price"></div>
+    </div>
+  </div>
+
+  <!-- ── Error ─────────────────────────────────────────────────── -->
+  <div class="empty-state" *ngIf="hasError && !isLoading">
+    <i class="bi bi-wifi-off empty-icon"></i>
+    <h3>Couldn't load your cart</h3>
+    <p>Please check your connection and try again.</p>
+  </div>
+
+  <!-- ── Empty state ───────────────────────────────────────────── -->
+  <div class="empty-state" *ngIf="isEmpty && !hasError">
+    <i class="bi bi-bag empty-icon"></i>
+    <h3>Your cart is empty</h3>
+    <p>Head back to the menu and add some items.</p>
+    <a class="go-menu-btn" routerLink="/dashboard">
+      <i class="bi bi-arrow-left"></i> Browse Vendors
+    </a>
+  </div>
+
+  <!-- ── Cart content ──────────────────────────────────────────── -->
+  <div class="cart-content" *ngIf="!isLoading && !hasError && !isEmpty">
+
+    <!-- Summary card -->
+    <div class="summary-card">
+      <div class="summary-row">
+        <span class="summary-label"><i class="bi bi-shop"></i> Vendor</span>
+        <span class="summary-value">{{ vendorName }}</span>
+      </div>
+      <div class="summary-row">
+        <span class="summary-label"><i class="bi bi-tag"></i> Status</span>
+        <span class="status-badge">{{ cartState.status }}</span>
+      </div>
+      <div class="summary-row" *ngIf="cartState.tokenNumber">
+        <span class="summary-label"><i class="bi bi-ticket-perforated"></i> Token</span>
+        <span class="token-value">{{ cartState.tokenNumber }}</span>
+      </div>
+      <div class="summary-row" *ngIf="readyTimeFormatted !== '—'">
+        <span class="summary-label"><i class="bi bi-clock"></i> Ready by</span>
+        <span class="ready-time">{{ readyTimeFormatted }}</span>
+      </div>
+    </div>
+
+    <!-- Item list -->
+    <div class="item-list">
+      <h2 class="section-title">Items</h2>
+
+      <div class="cart-item" *ngFor="let item of items">
+
+        <!-- Image / placeholder -->
+        <div class="ci-img-wrap">
+          <img *ngIf="item.menuItem.imageUrl" [src]="item.menuItem.imageUrl" [alt]="item.menuItem.itemName" />
+          <div *ngIf="!item.menuItem.imageUrl" class="ci-img-placeholder">
+            <i class="bi bi-egg-fried"></i>
+          </div>
+        </div>
+
+        <!-- Details -->
+        <div class="ci-details">
+          <div class="ci-name">{{ item.menuItem.itemName }}</div>
+          <div class="ci-category" *ngIf="item.menuItem.category">{{ item.menuItem.category }}</div>
+          <div class="ci-unit-price">₹{{ item.menuItem.price | number:'1.2-2' }} each</div>
+        </div>
+
+        <!-- Stepper + subtotal -->
+        <div class="ci-right">
+          <div class="qty-stepper">
+            <button class="stepper-btn" (click)="reduce(item)">
+              <i class="bi bi-dash-lg"></i>
+            </button>
+            <span class="qty-count">{{ item.quantity }}</span>
+            <button class="stepper-btn stepper-plus" (click)="add(item)">
+              <i class="bi bi-plus-lg"></i>
+            </button>
+          </div>
+          <span class="ci-subtotal">₹{{ item.price | number:'1.2-2' }}</span>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Total bar -->
+    <div class="total-bar">
+      <div class="total-row">
+        <span>Subtotal ({{ items.length }} item{{ items.length !== 1 ? 's' : '' }})</span>
+        <span>₹{{ cartState.totalAmount | number:'1.2-2' }}</span>
+      </div>
+      <div class="total-row total-bold">
+        <span>Total</span>
+        <span>₹{{ cartState.totalAmount | number:'1.2-2' }}</span>
+      </div>
+      <button class="place-order-btn">
+        <i class="bi bi-lightning-fill"></i> Place Order
+      </button>
+      <p class="ready-hint" *ngIf="readyTimeFormatted !== '—'">
+        Estimated ready time: <strong>{{ readyTimeFormatted }}</strong>
+      </p>
+    </div>
+
+  </div>
+
+</div>
