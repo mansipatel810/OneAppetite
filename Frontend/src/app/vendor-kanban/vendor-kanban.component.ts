@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { Router } from '@angular/router';
 import { PLATFORM_ID, Inject } from '@angular/core';
@@ -11,7 +11,7 @@ import { OrderService, VendorOrder } from '../services/order.service';
   imports: [CommonModule],
   templateUrl: './vendor-kanban.component.html',
 })
-export class VendorKanbanComponent implements OnInit {
+export class VendorKanbanComponent implements OnInit, OnDestroy {
   columns: { label: string; status: string }[] = [
     { label: 'Placed',    status: 'PLACED' },
     { label: 'Preparing', status: 'PREPARING' },
@@ -23,6 +23,9 @@ export class VendorKanbanComponent implements OnInit {
   vendorName = '';
   loading = true;
   error = '';
+  private pollingInterval: any;
+  private knownOrderIds = new Set<number>(); // tracks orders already seen
+  private audio = new Audio('/orderPlaced.mp3');
 
   constructor(
     private authService: AuthService,
@@ -42,24 +45,55 @@ export class VendorKanbanComponent implements OnInit {
     }
     this.vendorId = session.userId;
     this.vendorName = session.name;
+
     this.loadOrders();
+
+    this.pollingInterval = setInterval(() => {
+      this.loadOrders();
+    }, 5000);
+  }
+
+  ngOnDestroy(): void {
+    if (this.pollingInterval) {
+      clearInterval(this.pollingInterval);
+    }
   }
 
   loadOrders(): void {
-    this.loading = true;
-    this.orderService.getVendorOrders(this.vendorId).subscribe({
-      next: (orders) => {
-        this.columns.forEach(col => {
-          this.ordersByStatus[col.status] = orders.filter(o => o.status === col.status);
-        });
-        this.loading = false;
-        this.cdr.detectChanges();
-      },
-      error: () => {
-        this.error = 'Failed to load orders.';
-        this.loading = false;
-        this.cdr.detectChanges();
+  this.orderService.getVendorOrders(this.vendorId).subscribe({
+    next: (orders) => {
+      // Only trigger sound for brand new PLACED orders
+      const newPlacedOrders = orders.filter(
+        o => o.status === 'PLACED' && !this.knownOrderIds.has(o.orderId)
+      );
+
+      // Play sound only if it's not the first load and there are new PLACED orders
+      if (newPlacedOrders.length > 0 && this.knownOrderIds.size > 0) {
+        this.playNotification();
       }
+
+      // Track ALL order IDs regardless of status
+      orders.forEach(o => this.knownOrderIds.add(o.orderId));
+
+      this.columns.forEach(col => {
+        this.ordersByStatus[col.status] = orders.filter(o => o.status === col.status);
+      });
+
+      this.loading = false;
+      this.cdr.detectChanges();
+    },
+    error: () => {
+      this.error = 'Failed to load orders.';
+      this.loading = false;
+      this.cdr.detectChanges();
+    }
+  });
+}
+
+  playNotification(): void {
+    this.audio.currentTime = 0; // rewind in case it's still playing
+    this.audio.play().catch(err => {
+      console.log('Audio play failed:', err);
     });
   }
 
@@ -74,6 +108,7 @@ export class VendorKanbanComponent implements OnInit {
   }
 
   logout(): void {
+    clearInterval(this.pollingInterval);
     this.authService.clearSession();
     this.router.navigate(['/login']);
   }
