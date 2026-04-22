@@ -1,6 +1,7 @@
 package com.cts.mfrp.oa.service;
 
 import com.cts.mfrp.oa.dto.response.UserResponse;
+import com.cts.mfrp.oa.exception.InvalidCredentialsException;
 import com.cts.mfrp.oa.exception.ResourceNotFoundException;
 import com.cts.mfrp.oa.model.Role;
 import com.cts.mfrp.oa.model.User;
@@ -16,6 +17,20 @@ public class AdminService {
 
     public AdminService(UserRepository userRepository) {
         this.userRepository = userRepository;
+    }
+
+    public void verifyAdmin(Integer callerId) {
+        if (callerId == null) {
+            throw new InvalidCredentialsException("Missing X-User-Id header.");
+        }
+        User caller = userRepository.findById(callerId)
+                .orElseThrow(() -> new InvalidCredentialsException("User not found."));
+        if (!Boolean.TRUE.equals(caller.getIsActive())) {
+            throw new InvalidCredentialsException("User account is disabled.");
+        }
+        if (caller.getRole() != Role.ADMIN) {
+            throw new InvalidCredentialsException("Admin access required.");
+        }
     }
 
     public List<UserResponse> getAllVendors() {

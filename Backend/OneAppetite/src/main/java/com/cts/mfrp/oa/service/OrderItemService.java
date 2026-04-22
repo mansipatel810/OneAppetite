@@ -17,10 +17,8 @@ public class OrderItemService {
     @Autowired private OrderItemRepository itemRepo;
     @Autowired private MenuItemRepository menuRepo;
     @Autowired private UserRepository userRepo;
+    @Autowired private WalletService walletService;
 
-    /**
-     * Adds a product to the cart and returns a safe DTO.
-     */
     @Transactional
     public OrderItemDTO addProductToCart(CartRequest request) {
         MenuItem item = menuRepo.findById(request.menuItemId())
@@ -34,7 +32,6 @@ public class OrderItemService {
             throw new RuntimeException("Insufficient stock.");
         }
 
-        // Stock Management
         int remainingStock = item.getQuantityAvailable() - request.quantity();
         item.setQuantityAvailable(remainingStock);
         if (remainingStock == 0) {
@@ -42,7 +39,6 @@ public class OrderItemService {
         }
         menuRepo.saveAndFlush(item);
 
-        // Cart Management
         Order cart = orderRepo.findByUser_UserIdAndStatus(request.userId(), OrderStatus.CART)
                 .orElseGet(() -> {
                     Order newOrder = new Order();
@@ -79,9 +75,6 @@ public class OrderItemService {
         return mapToDTO(resultItem);
     }
 
-    /**
-     * Retrieves the active cart for a user as a safe DTO.
-     */
     public CartResponseDTO getActiveCart(Integer userId) {
         Order cart = orderRepo.findByUser_UserIdAndStatus(userId, OrderStatus.CART)
                 .orElseThrow(() -> new RuntimeException("No active cart found for user ID: " + userId));
@@ -89,14 +82,33 @@ public class OrderItemService {
         return mapToCartDTO(cart);
     }
 
-    /**
-     * Internal helper to map a full Order Entity to a CartResponseDTO.
-     */
+    public List<CartResponseDTO> getOrderHistory(Integer userId) {
+        return orderRepo.findByUser_UserIdAndStatusNotOrderByOrderTimeDesc(userId, OrderStatus.CART)
+                .stream().map(this::mapToCartDTO).toList();
+    }
+
+    @Transactional
+    public CartResponseDTO placeOrder(Integer userId) {
+        Order cart = orderRepo.findByUser_UserIdAndStatus(userId, OrderStatus.CART)
+                .orElseThrow(() -> new RuntimeException("No active cart found for user ID: " + userId));
+
+        Float total = cart.getTotalAmount();
+        if (total == null || total <= 0f) {
+            throw new RuntimeException("Cart is empty.");
+        }
+
+        walletService.debit(userId, total.doubleValue());
+
+        cart.setStatus(OrderStatus.PLACED);
+        cart.setOrderTime(LocalDateTime.now());
+        return mapToCartDTO(orderRepo.save(cart));
+    }
+
     private CartResponseDTO mapToCartDTO(Order order) {
         User v = order.getVendor();
         VendorDTO vendorDTO = new VendorDTO(
                 v.getUserId(), v.getName(), v.getEmail(),
-                v.getPhone(), v.getIsActive(), v.getVendorName(),v.getVendorType()
+                v.getPhone(), v.getIsActive(), v.getVendorName(), v.getVendorType()
         );
 
         List<OrderItemDTO> itemDTOs = order.getOrderItems().stream()
@@ -115,14 +127,11 @@ public class OrderItemService {
         );
     }
 
-    /**
-     * Internal helper to map an OrderItem Entity to an OrderItemDTO.
-     */
     private OrderItemDTO mapToDTO(OrderItem entity) {
         User v = entity.getMenuItem().getVendor();
         VendorDTO vendorDTO = new VendorDTO(
                 v.getUserId(), v.getName(), v.getEmail(),
-                v.getPhone(), v.getIsActive(), v.getVendorName(),v.getVendorType()
+                v.getPhone(), v.getIsActive(), v.getVendorName(), v.getVendorType()
         );
 
         MenuItem m = entity.getMenuItem();
