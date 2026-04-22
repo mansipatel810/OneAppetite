@@ -16,6 +16,7 @@ import com.cts.mfrp.oa.model.User;
 import com.cts.mfrp.oa.repository.BuildingRepository;
 import com.cts.mfrp.oa.repository.UserRepository;
 import org.mindrot.jbcrypt.BCrypt;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.Set;
@@ -27,10 +28,14 @@ public class AuthService {
 
     private final UserRepository userRepository;
     private final BuildingRepository buildingRepository;
+    private final String adminRegistrationSecret;
 
-    public AuthService(UserRepository userRepository, BuildingRepository buildingRepository) {
+    public AuthService(UserRepository userRepository,
+                       BuildingRepository buildingRepository,
+                       @Value("${app.admin.registration-secret}") String adminRegistrationSecret) {
         this.userRepository = userRepository;
         this.buildingRepository = buildingRepository;
+        this.adminRegistrationSecret = adminRegistrationSecret;
     }
 
     public UserResponse register(RegisterRequest request) {
@@ -51,9 +56,13 @@ public class AuthService {
         if (request.role() != null && request.role().equalsIgnoreCase("VENDOR")) {
             throw new InvalidCredentialsException("Vendor registration requires /api/auth/register/vendor endpoint.");
         } else if (request.role() != null && request.role().equalsIgnoreCase("ADMIN")) {
+            if (request.adminSecret() == null || !adminRegistrationSecret.equals(request.adminSecret())) {
+                throw new InvalidCredentialsException("Invalid or missing admin registration secret.");
+            }
             user.setRole(Role.ADMIN);
         } else {
             user.setRole(Role.EMPLOYEE);
+            user.setWalletBalance(1000.0);
         }
         user.setIsActive(true);
 
@@ -105,7 +114,8 @@ public class AuthService {
                 saved.getVendorName(),
                 saved.getVendorDescription(),
                 saved.getBuilding().getBuildingId(),
-                saved.getVendorImageUrl()
+                saved.getVendorImageUrl(),
+                saved.getVendorType()
         );
     }
 

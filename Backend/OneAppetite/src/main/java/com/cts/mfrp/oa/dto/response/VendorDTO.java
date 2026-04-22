@@ -6,5 +6,6 @@ public record VendorDTO(
         String email,
         String phone,
         Boolean isActive,
-        String vendorName
+        String vendorName,
+        String vendorType
 ) {}

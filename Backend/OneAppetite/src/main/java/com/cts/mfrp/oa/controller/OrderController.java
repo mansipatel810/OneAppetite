@@ -66,7 +66,8 @@ public class OrderController {
                 order.getVendor().getEmail(),
                 order.getVendor().getPhone(),
                 order.getVendor().getIsActive(),
-                order.getVendor().getVendorName()
+                order.getVendor().getVendorName(),
+                order.getVendor().getVendorType()
         );
 
         return new OrderDTO(
@@ -90,7 +91,8 @@ public class OrderController {
                 menuItem.getVendor().getEmail(),
                 menuItem.getVendor().getPhone(),
                 menuItem.getVendor().getIsActive(),
-                menuItem.getVendor().getVendorName()
+                menuItem.getVendor().getVendorName(),
+                menuItem.getVendor().getVendorType()
         );
 
         MenuItemDTO menuItemDTO = new MenuItemDTO(

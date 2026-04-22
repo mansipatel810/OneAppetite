@@ -46,4 +46,11 @@ public class User {
 
     @Column(name = "is_active", nullable = false)
     private Boolean isActive = true;
+
+    @Column(name = "wallet_balance", nullable = false)
+    private Double walletBalance = 0.0;
+
+    @Column(name = "vendor_type", length = 20)
+    private String vendorType;
+
 }

@@ -13,5 +13,11 @@
     "secure": false,
     "changeOrigin": true,
     "logLevel": "debug"
+  },
+  "/vendors": {
+    "target": "http://localhost:8081",
+    "secure": false,
+    "changeOrigin": true,
+    "logLevel": "debug"
   }
 }

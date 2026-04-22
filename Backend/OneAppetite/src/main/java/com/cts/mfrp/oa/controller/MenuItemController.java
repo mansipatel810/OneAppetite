@@ -5,12 +5,12 @@ import com.cts.mfrp.oa.model.MenuItem;
 import com.cts.mfrp.oa.service.MenuItemService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+import java.util.stream.Collectors;
 
 import java.util.List;
 
 @RestController
 @RequestMapping("/menu")
-@CrossOrigin(origins = "*")
 public class MenuItemController {
 
     @Autowired private MenuItemService menuItemService;
@@ -41,4 +41,28 @@ public class MenuItemController {
                                @PathVariable Integer itemId) {
         menuItemService.deleteMenuItem(vendorId, itemId);
     }
+    @GetMapping("/vendor/{vendorId}/breakfast")
+    public List<MenuItemResponse> getBreakfastItems(@PathVariable Integer vendorId) {
+        return menuItemService.getMenuItemsByVendor(vendorId)
+                .stream()
+                .filter(m -> m.mealCourse().equalsIgnoreCase("Breakfast"))
+                .collect(Collectors.toList());
+    }
+
+    @GetMapping("/vendor/{vendorId}/lunch")
+    public List<MenuItemResponse> getLunchItems(@PathVariable Integer vendorId) {
+        return menuItemService.getMenuItemsByVendor(vendorId)
+                .stream()
+                .filter(m -> m.mealCourse().equalsIgnoreCase("Lunch"))
+                .collect(Collectors.toList());
+    }
+
+    @GetMapping("/vendor/{vendorId}/dinner")
+    public List<MenuItemResponse> getDinnerItems(@PathVariable Integer vendorId) {
+        return menuItemService.getMenuItemsByVendor(vendorId)
+                .stream()
+                .filter(m -> m.mealCourse().equalsIgnoreCase("Dinner"))
+                .collect(Collectors.toList());
+    }
+
 }

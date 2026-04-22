@@ -9,5 +9,6 @@ public record VendorRegisterResponse(
         String vendorName,
         String vendorDescription,
         Integer buildingId,
-        String vendorImageUrl
+        String vendorImageUrl,
+        String vendorType
 ) {}

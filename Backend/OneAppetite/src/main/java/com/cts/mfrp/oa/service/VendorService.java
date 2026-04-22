@@ -31,7 +31,8 @@ public class VendorService {
                 v.getVendorName(),
                 v.getVendorDescription(),
                 v.getBuilding().getBuildingId(),
-                v.getVendorImageUrl()
+                v.getVendorImageUrl(),
+                v.getVendorType()
         )).toList();
     }
 

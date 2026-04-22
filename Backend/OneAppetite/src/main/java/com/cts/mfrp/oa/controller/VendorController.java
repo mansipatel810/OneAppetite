@@ -5,13 +5,17 @@ import com.cts.mfrp.oa.service.VendorService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import java.util.stream.Collectors;
+
+import com.cts.mfrp.oa.dto.response.VendorRegisterResponse;
+
+
 
 import java.util.List;
 import java.util.Map;
 
 @RestController
 @RequestMapping("/vendors")
-@CrossOrigin(origins = "*")
 public class VendorController {
 
     @Autowired private VendorService vendorService;
@@ -28,4 +32,22 @@ public class VendorController {
         vendorService.updateVendorImage(vendorId, request.get("vendorImageUrl"));
         return ResponseEntity.ok(Map.of("message", "Vendor image updated successfully."));
     }
+    @GetMapping("/veg/{buildingId}")
+    public List<VendorRegisterResponse> getVegVendors(@PathVariable Integer buildingId) {
+        return vendorService.getVendorsByBuilding(buildingId)
+                .stream()
+                .filter(v -> v.vendorType().equalsIgnoreCase("Veg"))
+                .collect(Collectors.toList());
+    }
+
+    @GetMapping("/nonveg/{buildingId}")
+    public List<VendorRegisterResponse> getNonVegVendors(@PathVariable Integer buildingId) {
+        return vendorService.getVendorsByBuilding(buildingId)
+                .stream()
+                .filter(v -> v.vendorType().equalsIgnoreCase("NonVeg"))
+                .collect(Collectors.toList());
+    }
+
+
+
 }
