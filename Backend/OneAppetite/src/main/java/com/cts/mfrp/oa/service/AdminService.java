@@ -43,7 +43,15 @@ public class AdminService {
                 .stream().map(this::toResponse).toList();
     }
 
-    public UserResponse toggleUserStatus(Integer userId) {
+    public List<UserResponse> getAllUsers() {
+        return userRepository.findAll()
+                .stream().map(this::toResponse).toList();
+    }
+
+    public UserResponse toggleUserStatus(Integer callerId, Integer userId) {
+        if (callerId != null && callerId.equals(userId)) {
+            throw new InvalidCredentialsException("You cannot change your own status.");
+        }
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with ID: " + userId));
         user.setIsActive(!user.getIsActive());
@@ -58,7 +66,8 @@ public class AdminService {
                 user.getEmail(),
                 user.getPhone(),
                 user.getRole().name(),
-                user.getIsActive()
+                user.getIsActive(),
+                user.getWalletBalance() == null ? 0.0 : user.getWalletBalance()
         );
     }
 }

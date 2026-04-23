@@ -74,7 +74,8 @@ public class AuthService {
                 saved.getEmail(),
                 saved.getPhone(),
                 saved.getRole().name(),
-                saved.getIsActive()
+                saved.getIsActive(),
+                saved.getWalletBalance() == null ? 0.0 : saved.getWalletBalance()
         );
     }
 
@@ -139,6 +140,9 @@ public class AuthService {
                     "No " + requestedRole.name().toLowerCase() + " account found for this email. "
                             + "Your account is registered as " + user.getRole().name().toLowerCase() + "."
             );
+        }
+        if (!Boolean.TRUE.equals(user.getIsActive())) {
+            throw new InvalidCredentialsException("Your account has been deactivated. Please contact an administrator.");
         }
         return new LoginResponse(user.getUserId(), user.getName(), user.getEmail(), user.getRole().name());
     }

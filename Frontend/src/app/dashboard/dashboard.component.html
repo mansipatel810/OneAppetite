@@ -36,6 +36,13 @@
       <a class="nav-item" routerLink="/settings" (click)="closeMobileMenu()">
         <i class="bi bi-gear"></i> Settings
       </a>
+
+      <ng-container *ngIf="user?.role === 'ADMIN'">
+        <p class="nav-section-label" style="margin-top: 18px;">Admin</p>
+        <a class="nav-item" routerLink="/admin/users" (click)="closeMobileMenu()">
+          <i class="bi bi-people-fill"></i> Manage Users
+        </a>
+      </ng-container>
     </nav>
 
     <div class="sidebar-footer">
