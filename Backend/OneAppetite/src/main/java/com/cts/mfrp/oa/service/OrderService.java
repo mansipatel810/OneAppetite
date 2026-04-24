@@ -29,10 +29,10 @@ public class OrderService {
         return orderRepository.save(order);
     }
     
-    public List<Order> getOrdersByVendor(Integer vendorId) {
-        return orderRepository.findByVendor_UserIdAndStatusNot(vendorId, OrderStatus.CART);
-    }
-
+        public List<Order> getOrdersByVendor(Integer vendorId) {
+            return orderRepository.findByVendor_UserIdAndStatusNot(vendorId, OrderStatus.CART);
+        }
+    
     @Transactional
     public Order placeOrder(Integer userId){
         Order cart = orderRepository.findByUser_UserIdAndStatus(userId, OrderStatus.CART)
