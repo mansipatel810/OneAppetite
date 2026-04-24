@@ -14,23 +14,16 @@ import java.util.List;
 public class AdminService {
 
     private final UserRepository userRepository;
+    private final AuthGuardService authGuard;
 
-    public AdminService(UserRepository userRepository) {
+    public AdminService(UserRepository userRepository,
+                        AuthGuardService authGuard) {
         this.userRepository = userRepository;
+        this.authGuard = authGuard;
     }
 
     public void verifyAdmin(Integer callerId) {
-        if (callerId == null) {
-            throw new InvalidCredentialsException("Missing X-User-Id header.");
-        }
-        User caller = userRepository.findById(callerId)
-                .orElseThrow(() -> new InvalidCredentialsException("User not found."));
-        if (!Boolean.TRUE.equals(caller.getIsActive())) {
-            throw new InvalidCredentialsException("User account is disabled.");
-        }
-        if (caller.getRole() != Role.ADMIN) {
-            throw new InvalidCredentialsException("Admin access required.");
-        }
+        authGuard.verifyAdmin(callerId);
     }
 
     public List<UserResponse> getAllVendors() {

@@ -2,6 +2,7 @@ package com.cts.mfrp.oa.controller;
 
 import com.cts.mfrp.oa.dto.response.MenuItemResponse;
 import com.cts.mfrp.oa.model.MenuItem;
+import com.cts.mfrp.oa.service.AuthGuardService;
 import com.cts.mfrp.oa.service.MenuItemService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -14,10 +15,15 @@ import java.util.List;
 public class MenuItemController {
 
     @Autowired private MenuItemService menuItemService;
+    @Autowired private AuthGuardService authGuard;
 
     // CREATE
     @PostMapping("/vendor/{vendorId}")
-    public MenuItemResponse addMenuItem(@RequestBody MenuItem item, @PathVariable Integer vendorId) {
+    public MenuItemResponse addMenuItem(
+            @RequestHeader(value = "X-User-Id", required = false) Integer callerId,
+            @RequestBody MenuItem item,
+            @PathVariable Integer vendorId) {
+        authGuard.verifyVendorSelf(callerId, vendorId);
         return menuItemService.addMenuItem(item, vendorId);
     }
 
@@ -29,16 +35,22 @@ public class MenuItemController {
 
     // UPDATE
     @PutMapping("/vendor/{vendorId}/item/{itemId}")
-    public MenuItemResponse updateMenuItem(@PathVariable Integer vendorId,
-                                           @PathVariable Integer itemId,
-                                           @RequestBody MenuItem updatedItem) {
+    public MenuItemResponse updateMenuItem(
+            @RequestHeader(value = "X-User-Id", required = false) Integer callerId,
+            @PathVariable Integer vendorId,
+            @PathVariable Integer itemId,
+            @RequestBody MenuItem updatedItem) {
+        authGuard.verifyVendorSelf(callerId, vendorId);
         return menuItemService.updateMenuItem(vendorId, itemId, updatedItem);
     }
 
     // DELETE
     @DeleteMapping("/vendor/{vendorId}/item/{itemId}")
-    public void deleteMenuItem(@PathVariable Integer vendorId,
-                               @PathVariable Integer itemId) {
+    public void deleteMenuItem(
+            @RequestHeader(value = "X-User-Id", required = false) Integer callerId,
+            @PathVariable Integer vendorId,
+            @PathVariable Integer itemId) {
+        authGuard.verifyVendorSelf(callerId, vendorId);
         menuItemService.deleteMenuItem(vendorId, itemId);
     }
     @GetMapping("/vendor/{vendorId}/breakfast")
