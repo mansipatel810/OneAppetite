@@ -29,12 +29,9 @@ public class OrderService {
         return orderRepository.save(order);
     }
     
-    public List<Order> getOrdersByVendor(Integer vendorId) {
-    return orderRepository.findByVendor_UserIdAndStatusNotIn(
-            vendorId,
-            List.of(OrderStatus.CART, OrderStatus.COMPLETED)
-        );
-    }
+        public List<Order> getOrdersByVendor(Integer vendorId) {
+            return orderRepository.findByVendor_UserIdAndStatusNot(vendorId, OrderStatus.CART);
+        }
     
     @Transactional
     public Order placeOrder(Integer userId){
