@@ -6,6 +6,7 @@ import { VendorKanbanComponent } from './vendor-kanban/vendor-kanban.component';
 import { ShellComponent }      from './shell/shell.component';
 import { MenuComponent }       from './menu/menu.component';
 import { CartViewComponent }   from './cart-view/cart-view.component';
+import { VendorMenuComponent } from './vendor-menu/vendor-menu.component';
 
 export const routes: Routes = [
   { path: 'admin/dashboard', component: DashboardComponent },
@@ -13,6 +14,7 @@ export const routes: Routes = [
   // ── Public (no sidebar/navbar) ────────────────────────────────
   { path: 'login',    component: LoginComponent },
   { path: 'register', component: RegisterComponent },
+  { path: 'vendor/menu', component: VendorMenuComponent },
 
   // ── Authenticated (inside ShellComponent) ─────────────────────
   {

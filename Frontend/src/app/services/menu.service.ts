@@ -18,6 +18,7 @@ export interface MenuItem {
 
 @Injectable({ providedIn: 'root' })
 export class MenuService {
+  private readonly API_BASE = '/api/menu';
   private http    = inject(HttpClient);
   private baseUrl = 'http://localhost:8081';
 
@@ -27,5 +28,11 @@ export class MenuService {
 
   getVendorById(vendorId: number): Observable<any> {
     return this.http.get<any>(`${this.baseUrl}/api/vendor/${vendorId}`);
+  }
+
+  toggleStock(vendorId: number, itemId: number): Observable<MenuItem> {
+    return this.http.put<MenuItem>(
+      `${this.API_BASE}/vendor/${vendorId}/item/${itemId}/toggle-stock`, {}
+    );
   }
 }

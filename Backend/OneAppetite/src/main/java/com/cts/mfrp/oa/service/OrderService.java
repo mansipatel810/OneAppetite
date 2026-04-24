@@ -30,12 +30,9 @@ public class OrderService {
     }
     
     public List<Order> getOrdersByVendor(Integer vendorId) {
-    return orderRepository.findByVendor_UserIdAndStatusNotIn(
-            vendorId,
-            List.of(OrderStatus.CART, OrderStatus.COMPLETED)
-        );
+        return orderRepository.findByVendor_UserIdAndStatusNot(vendorId, OrderStatus.CART);
     }
-    
+
     @Transactional
     public Order placeOrder(Integer userId){
         Order cart = orderRepository.findByUser_UserIdAndStatus(userId, OrderStatus.CART)

@@ -59,6 +59,19 @@ public class MenuItemService {
                 .toList();
     }
 
+    public MenuItemResponse toggleStock(Integer vendorId, Integer itemId) {
+        User vendor = validateVendor(vendorId);
+        MenuItem existing = menuItemRepo.findById(itemId).orElseThrow();
+
+        if (!existing.getVendor().equals(vendor)) {
+            throw new IllegalArgumentException("Vendor does not own this menu item");
+        }
+
+        existing.setIsInStock(!existing.getIsInStock());
+        MenuItem saved = menuItemRepo.save(existing);
+        return toResponse(saved);
+    }
+    
     // UPDATE
     public MenuItemResponse updateMenuItem(Integer vendorId, Integer itemId, MenuItem updatedItem) {
         User vendor = validateVendor(vendorId);

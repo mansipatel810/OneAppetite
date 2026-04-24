@@ -35,6 +35,12 @@ public class MenuItemController {
         return menuItemService.updateMenuItem(vendorId, itemId, updatedItem);
     }
 
+    @PutMapping("/vendor/{vendorId}/item/{itemId}/toggle-stock")
+    public MenuItemResponse toggleStock(@PathVariable Integer vendorId,
+                                    @PathVariable Integer itemId) {
+        return menuItemService.toggleStock(vendorId, itemId);
+    }
+
     // DELETE
     @DeleteMapping("/vendor/{vendorId}/item/{itemId}")
     public void deleteMenuItem(@PathVariable Integer vendorId,
