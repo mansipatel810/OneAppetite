@@ -10,7 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Random;
-
+import java.util.List;
 @Service
 public class OrderService {
     @Autowired
@@ -28,7 +28,11 @@ public class OrderService {
         orderEventPublisher.publishOrderPlaced(savedOrder);
         return orderRepository.save(order);
     }
-
+    
+        public List<Order> getOrdersByVendor(Integer vendorId) {
+            return orderRepository.findByVendor_UserIdAndStatusNot(vendorId, OrderStatus.CART);
+        }
+    
     @Transactional
     public Order placeOrder(Integer userId){
         Order cart = orderRepository.findByUser_UserIdAndStatus(userId, OrderStatus.CART)

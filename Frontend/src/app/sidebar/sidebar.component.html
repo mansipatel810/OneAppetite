@@ -1,0 +1,71 @@
+<!-- sidebar.component.html -->
+
+<div class="mobile-overlay" [class.open]="mobileMenuOpen" (click)="close()"></div>
+
+<aside class="sidebar" [class.mobile-open]="mobileMenuOpen">
+
+  <!-- ── Logo ─────────────────────────────────────────────────── -->
+  <div class="sidebar-logo">
+    <div class="logo-mark"><i class="bi bi-geo-fill"></i></div>
+    <span class="logo-text">One Appetite</span>
+  </div>
+
+  <!-- ── Navigation ───────────────────────────────────────────── -->
+  <nav class="sidebar-nav">
+    <p class="nav-section-label">Navigation</p>
+
+    <a class="nav-item" routerLink="/dashboard" routerLinkActive="active" (click)="close()">
+      <i class="bi bi-grid-fill"></i> Dashboard
+    </a>
+    <a class="nav-item" routerLink="/my-orders" routerLinkActive="active" (click)="close()">
+      <i class="bi bi-receipt"></i> My Orders
+    </a>
+    <a class="nav-item" routerLink="/settings" routerLinkActive="active" (click)="close()">
+      <i class="bi bi-gear"></i> Settings
+    </a>
+  </nav>
+
+  <!-- ── Cart Summary (persistent, always visible) ────────────── -->
+  <div class="sidebar-cart">
+    <div class="cart-section-header">
+      <p class="nav-section-label" style="margin:0">Current Cart</p>
+      <span class="cart-badge" *ngIf="cartCount > 0">{{ cartCount }}</span>
+    </div>
+
+    <!-- Empty state -->
+    <div class="cart-empty" *ngIf="cartItems.length === 0">
+      <i class="bi bi-bag"></i>
+      <span>Cart is empty</span>
+    </div>
+
+    <!-- Item list -->
+    <div class="cart-item-list" *ngIf="cartItems.length > 0">
+      <div class="sidebar-cart-item" *ngFor="let ci of cartItems">
+        <div class="sci-name">{{ ci.menuItem.itemName }}</div>
+        <div class="sci-right">
+          <span class="sci-qty">×{{ ci.quantity }}</span>
+          <span class="sci-price">₹{{ (ci.menuItem.price * ci.quantity) | number:'1.0-0' }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Total + View Cart -->
+    <div class="cart-footer-block" *ngIf="cartItems.length > 0">
+      <div class="cart-total-row">
+        <span>Total</span>
+        <span class="cart-total-amt">₹{{ cartTotal | number:'1.2-2' }}</span>
+      </div>
+      <button class="view-cart-btn" (click)="goToCart()">
+        <i class="bi bi-bag-check"></i> View Cart
+      </button>
+    </div>
+  </div>
+
+  <!-- ── Footer / Logout ──────────────────────────────────────── -->
+  <div class="sidebar-footer">
+    <button class="nav-item logout-btn" (click)="logout()">
+      <i class="bi bi-box-arrow-right"></i> Logout
+    </button>
+  </div>
+
+</aside>

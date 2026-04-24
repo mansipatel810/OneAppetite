@@ -12,6 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.stream.Collectors;
+import java.util.List;
 
 @RestController
 @RequestMapping("/orders")
@@ -36,6 +37,15 @@ public class OrderController {
 
         OrderDTO dto = convertToDTO(finalizedOrder);
         return ResponseEntity.ok(dto);
+    }
+
+    @GetMapping("/vendor/{vendorId}")
+    public ResponseEntity<List<OrderDTO>> getVendorOrders(@PathVariable Integer vendorId) {
+        List<Order> orders = orderService.getOrdersByVendor(vendorId);
+        List<OrderDTO> dtos = orders.stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(dtos);
     }
 
     // Inline conversion method
