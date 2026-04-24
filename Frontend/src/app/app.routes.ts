@@ -6,7 +6,8 @@ import { VendorKanbanComponent } from './vendor-kanban/vendor-kanban.component';
 import { ShellComponent }      from './shell/shell.component';
 import { MenuComponent }       from './menu/menu.component';
 import { CartViewComponent }   from './cart-view/cart-view.component';
-import { VendorMenuComponent } from './vendor-menu/vendor-menu.component';
+import { VendorMenuComponent } from './vendor-menu-view/vendor-menu.component';
+import { UserSettingsComponent } from './user-settings/user-settings.component';
 
 export const routes: Routes = [
   { path: 'admin/dashboard', component: DashboardComponent },
@@ -15,7 +16,8 @@ export const routes: Routes = [
   { path: 'login',    component: LoginComponent },
   { path: 'register', component: RegisterComponent },
   { path: 'vendor/menu', component: VendorMenuComponent },
-
+  { path: 'user/settings', component: UserSettingsComponent },
+  
   // ── Authenticated (inside ShellComponent) ─────────────────────
   {
     path: '',
