@@ -40,6 +40,11 @@ export interface CartResponseDTO {
   orderItems?: CartItemDTO[];  // fallback key some backends use
 }
 
+export interface WalletResponse{
+  userId: number;
+  walletBalance: number;
+}
+
 export interface CartRequest {
   userId: number;
   menuItemId: number;
@@ -160,6 +165,21 @@ export class CartService {
   viewCart(userId: number): Observable<CartResponseDTO> {
     return this.http.get<CartResponseDTO>(`${this.BASE}/api/cart/view/${userId}`)
       .pipe(tap(res => this._applyResponse(res)));
+  }
+
+  /* ── API: place order (deducts wallet, status CART→PLACED) ──── */
+  placeOrder(userId: number): Observable<CartResponseDTO> {
+    return this.http.post<CartResponseDTO>(`${this.BASE}/api/cart/place/${userId}`, {})
+      .pipe(tap(res => this._applyResponse(res)));
+  }
+
+  getWalletBalance(userId: number): Observable<WalletResponse> {
+    return this.http.get<WalletResponse>(`${this.BASE}/api/wallet/${userId}`);
+  }
+
+  /* ── Reset cart state (after successful order) ───────────────── */
+  clearCart(): void {
+    this._reset();
   }
 
   /* ── Private helpers ─────────────────────────────────────────── */
