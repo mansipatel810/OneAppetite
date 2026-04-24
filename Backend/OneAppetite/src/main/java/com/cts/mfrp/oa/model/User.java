@@ -59,4 +59,7 @@ public class User {
     @Column(name = "daily_topup_total")
     private Double dailyTopUpTotal = 0.0;
 
+    @Column(name = "notifications_enabled", nullable = false)
+    private Boolean notificationsEnabled = false;
+
 }

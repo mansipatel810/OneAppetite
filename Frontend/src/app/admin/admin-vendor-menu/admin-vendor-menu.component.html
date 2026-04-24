@@ -50,7 +50,9 @@
       <div class="breadcrumb">
         <span class="bc-step">Admin</span>
         <i class="bi bi-chevron-right bc-sep"></i>
-        <span class="bc-active">User Management</span>
+        <a class="bc-link" routerLink="/admin/users">Users</a>
+        <i class="bi bi-chevron-right bc-sep"></i>
+        <span class="bc-active">Vendor Menu</span>
       </div>
 
       <div class="topbar-right">
@@ -63,15 +65,24 @@
     <!-- Content -->
     <main class="content-area">
 
+      <!-- Back link -->
+      <button class="back-btn" (click)="back()">
+        <i class="bi bi-arrow-left"></i> Back to Users
+      </button>
+
       <!-- Hero -->
       <div class="hero-block">
         <h1 class="hero-heading">
-          Manage <em>Users.</em>
+          <em>{{ vendorName() }}</em>
         </h1>
-        <p class="hero-sub">
-          Oversee cafeteria access — review registered employees and vendors,
-          and activate or deactivate accounts as needed.
+        <p class="hero-sub" *ngIf="vendorDescription()">
+          {{ vendorDescription() }}
         </p>
+        <div class="vendor-meta" *ngIf="vendorType()">
+          <span class="vendor-type-pill" [class.veg]="vendorType() === 'VEG'" [class.nonveg]="vendorType() === 'NON_VEG'">
+            <i class="bi bi-circle-fill"></i> {{ vendorType() }}
+          </span>
+        </div>
       </div>
 
       <!-- Error banner -->
@@ -83,145 +94,98 @@
         </button>
       </div>
 
-      <!-- Stat cards -->
+      <!-- Loading state -->
+      <div class="loading-state" *ngIf="loading()">
+        <div class="spinner-border" role="status"></div>
+        <p>Loading menu...</p>
+      </div>
+
+      <!-- Stats -->
       <div class="stats-row" *ngIf="!loading()">
         <div class="stat-card">
-          <div class="stat-icon-wrap total"><i class="bi bi-people-fill"></i></div>
+          <div class="stat-icon-wrap total"><i class="bi bi-card-list"></i></div>
           <div class="stat-body">
-            <div class="stat-label">Total Users</div>
+            <div class="stat-label">Total Items</div>
             <div class="stat-value">{{ stats().total }}</div>
           </div>
         </div>
         <div class="stat-card">
-          <div class="stat-icon-wrap employee"><i class="bi bi-person-badge-fill"></i></div>
+          <div class="stat-icon-wrap employee"><i class="bi bi-check-circle-fill"></i></div>
           <div class="stat-body">
-            <div class="stat-label">Employees</div>
-            <div class="stat-value">{{ stats().employees }}</div>
+            <div class="stat-label">In Stock</div>
+            <div class="stat-value">{{ stats().inStock }}</div>
           </div>
         </div>
         <div class="stat-card">
-          <div class="stat-icon-wrap vendor"><i class="bi bi-shop"></i></div>
+          <div class="stat-icon-wrap inactive"><i class="bi bi-slash-circle-fill"></i></div>
           <div class="stat-body">
-            <div class="stat-label">Vendors</div>
-            <div class="stat-value">{{ stats().vendors }}</div>
+            <div class="stat-label">Out of Stock</div>
+            <div class="stat-value">{{ stats().outOfStock }}</div>
           </div>
         </div>
         <div class="stat-card">
-          <div class="stat-icon-wrap inactive"><i class="bi bi-pause-circle-fill"></i></div>
+          <div class="stat-icon-wrap vendor"><i class="bi bi-flower3"></i></div>
           <div class="stat-body">
-            <div class="stat-label">Inactive</div>
-            <div class="stat-value">{{ stats().inactive }}</div>
+            <div class="stat-label">Veg Items</div>
+            <div class="stat-value">{{ stats().veg }}</div>
           </div>
         </div>
       </div>
 
-      <!-- Filters -->
-      <div class="filter-bar" *ngIf="!loading()">
+      <!-- Filter tabs -->
+      <div class="filter-bar" *ngIf="!loading() && items().length > 0">
         <div class="role-tabs">
-          <button
-            class="role-tab"
-            [class.active]="roleFilter() === 'ALL'"
-            (click)="setRoleFilter('ALL')"
-          >All</button>
-          <button
-            class="role-tab"
-            [class.active]="roleFilter() === 'EMPLOYEE'"
-            (click)="setRoleFilter('EMPLOYEE')"
-          >Employees</button>
-          <button
-            class="role-tab"
-            [class.active]="roleFilter() === 'VENDOR'"
-            (click)="setRoleFilter('VENDOR')"
-          >Vendors</button>
-        </div>
-
-        <div class="search-box">
-          <i class="bi bi-search"></i>
-          <input
-            type="text"
-            placeholder="Search by name or email..."
-            [value]="searchTerm()"
-            (input)="onSearch($event)"
-          />
+          <button class="role-tab" [class.active]="courseFilter() === 'ALL'" (click)="setCourse('ALL')">All</button>
+          <button class="role-tab" [class.active]="courseFilter() === 'Breakfast'" (click)="setCourse('Breakfast')">Breakfast</button>
+          <button class="role-tab" [class.active]="courseFilter() === 'Lunch'" (click)="setCourse('Lunch')">Lunch</button>
+          <button class="role-tab" [class.active]="courseFilter() === 'Dinner'" (click)="setCourse('Dinner')">Dinner</button>
         </div>
       </div>
 
-      <!-- Loading state -->
-      <div class="loading-state" *ngIf="loading()">
-        <div class="spinner-border" role="status"></div>
-        <p>Loading users...</p>
-      </div>
-
-      <!-- Users table -->
+      <!-- Menu table -->
       <div class="users-panel" *ngIf="!loading()">
         <div class="table-wrap">
           <table class="users-table">
             <thead>
               <tr>
-                <th>User</th>
-                <th>Email</th>
-                <th>Phone</th>
-                <th>Role</th>
-                <th>Wallet</th>
-                <th>Status</th>
-                <th class="th-actions">Actions</th>
+                <th>Item</th>
+                <th>Course</th>
+                <th>Category</th>
+                <th>Dietary</th>
+                <th>Price</th>
+                <th>Qty</th>
+                <th>Stock</th>
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let u of filteredUsers()">
+              <tr *ngFor="let item of filteredItems()">
                 <td class="user-cell">
-                  <div class="user-avatar">{{ initials(u.name) }}</div>
                   <div class="user-info">
-                    <div class="user-name">{{ u.name }}</div>
-                    <div class="user-id">#{{ u.userId }}</div>
+                    <div class="user-name">{{ item.itemName }}</div>
+                    <div class="user-id">#{{ item.itemId }}</div>
                   </div>
                 </td>
-                <td class="email-cell">{{ u.email }}</td>
-                <td>{{ u.phone }}</td>
+                <td>{{ item.mealCourse || '—' }}</td>
+                <td>{{ item.category || '—' }}</td>
                 <td>
-                  <span [ngClass]="roleClass(u.role)">{{ u.role }}</span>
+                  <span [ngClass]="dietaryClass(item.dietaryType)">{{ item.dietaryType || '—' }}</span>
                 </td>
                 <td class="wallet-cell">
-                  <i class="bi bi-wallet2"></i>
-                  <span>{{ u.walletBalance | currency:'INR':'symbol':'1.2-2' }}</span>
+                  <span>{{ item.price | currency:'INR':'symbol':'1.2-2' }}</span>
                 </td>
+                <td>{{ item.quantityAvailable }}</td>
                 <td>
-                  <span class="status-pill" [class.active]="u.isActive" [class.inactive]="!u.isActive">
+                  <span class="status-pill" [class.active]="item.isInStock" [class.inactive]="!item.isInStock">
                     <span class="status-dot"></span>
-                    {{ u.isActive ? 'Active' : 'Inactive' }}
+                    {{ item.isInStock ? 'In Stock' : 'Out' }}
                   </span>
-                </td>
-                <td class="th-actions">
-                  <div class="actions-cell">
-                    <button
-                      *ngIf="u.role === 'VENDOR'"
-                      class="action-icon-btn"
-                      title="View vendor's menu"
-                      (click)="viewMenu(u)"
-                    >
-                      <i class="bi bi-card-list"></i>
-                    </button>
-                    <div
-                      class="form-check form-switch toggle-switch"
-                      [title]="u.isActive ? 'Click to deactivate' : 'Click to activate'"
-                    >
-                      <input
-                        class="form-check-input"
-                        type="checkbox"
-                        role="switch"
-                        [checked]="u.isActive"
-                        [disabled]="togglingId() === u.userId"
-                        (change)="toggle(u)"
-                      />
-                    </div>
-                  </div>
                 </td>
               </tr>
 
-              <tr *ngIf="filteredUsers().length === 0">
+              <tr *ngIf="filteredItems().length === 0">
                 <td colspan="7" class="empty-row">
                   <i class="bi bi-inbox"></i>
-                  <span>No users match the current filters.</span>
+                  <span>{{ items().length === 0 ? 'This vendor has no menu items yet.' : 'No items match the current filter.' }}</span>
                 </td>
               </tr>
             </tbody>

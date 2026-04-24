@@ -16,6 +16,23 @@ export interface UserResponse {
   walletBalance: number;
 }
 
+/** Mirrors backend MenuItemResponse.java record. */
+export interface MenuItemResponse {
+  itemId: number;
+  itemName: string;
+  category: string;
+  mealCourse: string;
+  dietaryType: string;
+  price: number;
+  quantityAvailable: number;
+  isInStock: boolean;
+  imageUrl: string | null;
+  vendorId: number;
+  vendorName: string;
+  vendorDescription: string;
+  vendorType: string | null;
+}
+
 /* ──────────────────────────── Service ─────────────────────────── */
 
 @Injectable({
@@ -50,6 +67,20 @@ export class AdminService {
         ),
         catchError((err) => AdminService.handleError(err, url))
       );
+  }
+
+  /* ── GET /menu/vendor/{vendorId} → public read-only menu (admin reuse) ── */
+
+  getVendorMenu(vendorId: number): Observable<MenuItemResponse[]> {
+    const url = `/menu/vendor/${vendorId}`;
+    console.log('[AdminService] GET', url);
+
+    return this.http.get<MenuItemResponse[]>(url).pipe(
+      tap((res) =>
+        console.log('[AdminService] getVendorMenu success →', res.length, 'items')
+      ),
+      catchError((err) => AdminService.handleError(err, url))
+    );
   }
 
   /* ── PUT /api/admin/users/{id}/toggle-status → flips isActive ── */

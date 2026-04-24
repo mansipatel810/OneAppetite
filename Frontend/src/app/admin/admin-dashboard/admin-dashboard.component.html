@@ -27,10 +27,10 @@
 
     <nav class="sidebar-nav">
       <p class="nav-section-label">Admin</p>
-      <a class="nav-item" routerLink="/admin/dashboard" (click)="closeMobileMenu()">
+      <a class="nav-item active" routerLink="/admin/dashboard" (click)="closeMobileMenu()">
         <i class="bi bi-grid-fill"></i> Dashboard
       </a>
-      <a class="nav-item active" routerLink="/admin/users" (click)="closeMobileMenu()">
+      <a class="nav-item" routerLink="/admin/users" (click)="closeMobileMenu()">
         <i class="bi bi-people-fill"></i> Users
       </a>
     </nav>
@@ -50,7 +50,7 @@
       <div class="breadcrumb">
         <span class="bc-step">Admin</span>
         <i class="bi bi-chevron-right bc-sep"></i>
-        <span class="bc-active">User Management</span>
+        <span class="bc-active">Dashboard</span>
       </div>
 
       <div class="topbar-right">
@@ -66,11 +66,11 @@
       <!-- Hero -->
       <div class="hero-block">
         <h1 class="hero-heading">
-          Manage <em>Users.</em>
+          Welcome back, <em>{{ user?.name ?? 'Admin' }}.</em>
         </h1>
         <p class="hero-sub">
-          Oversee cafeteria access — review registered employees and vendors,
-          and activate or deactivate accounts as needed.
+          Oversee cafeteria operations at a glance — review user activity,
+          monitor vendor coverage, and jump straight to where you need to act.
         </p>
       </div>
 
@@ -81,6 +81,12 @@
         <button class="dismiss-btn" (click)="dismissError()" aria-label="Dismiss">
           <i class="bi bi-x-lg"></i>
         </button>
+      </div>
+
+      <!-- Loading state -->
+      <div class="loading-state" *ngIf="loading()">
+        <div class="spinner-border" role="status"></div>
+        <p>Loading dashboard...</p>
       </div>
 
       <!-- Stat cards -->
@@ -115,118 +121,16 @@
         </div>
       </div>
 
-      <!-- Filters -->
-      <div class="filter-bar" *ngIf="!loading()">
-        <div class="role-tabs">
-          <button
-            class="role-tab"
-            [class.active]="roleFilter() === 'ALL'"
-            (click)="setRoleFilter('ALL')"
-          >All</button>
-          <button
-            class="role-tab"
-            [class.active]="roleFilter() === 'EMPLOYEE'"
-            (click)="setRoleFilter('EMPLOYEE')"
-          >Employees</button>
-          <button
-            class="role-tab"
-            [class.active]="roleFilter() === 'VENDOR'"
-            (click)="setRoleFilter('VENDOR')"
-          >Vendors</button>
-        </div>
-
-        <div class="search-box">
-          <i class="bi bi-search"></i>
-          <input
-            type="text"
-            placeholder="Search by name or email..."
-            [value]="searchTerm()"
-            (input)="onSearch($event)"
-          />
-        </div>
-      </div>
-
-      <!-- Loading state -->
-      <div class="loading-state" *ngIf="loading()">
-        <div class="spinner-border" role="status"></div>
-        <p>Loading users...</p>
-      </div>
-
-      <!-- Users table -->
-      <div class="users-panel" *ngIf="!loading()">
-        <div class="table-wrap">
-          <table class="users-table">
-            <thead>
-              <tr>
-                <th>User</th>
-                <th>Email</th>
-                <th>Phone</th>
-                <th>Role</th>
-                <th>Wallet</th>
-                <th>Status</th>
-                <th class="th-actions">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let u of filteredUsers()">
-                <td class="user-cell">
-                  <div class="user-avatar">{{ initials(u.name) }}</div>
-                  <div class="user-info">
-                    <div class="user-name">{{ u.name }}</div>
-                    <div class="user-id">#{{ u.userId }}</div>
-                  </div>
-                </td>
-                <td class="email-cell">{{ u.email }}</td>
-                <td>{{ u.phone }}</td>
-                <td>
-                  <span [ngClass]="roleClass(u.role)">{{ u.role }}</span>
-                </td>
-                <td class="wallet-cell">
-                  <i class="bi bi-wallet2"></i>
-                  <span>{{ u.walletBalance | currency:'INR':'symbol':'1.2-2' }}</span>
-                </td>
-                <td>
-                  <span class="status-pill" [class.active]="u.isActive" [class.inactive]="!u.isActive">
-                    <span class="status-dot"></span>
-                    {{ u.isActive ? 'Active' : 'Inactive' }}
-                  </span>
-                </td>
-                <td class="th-actions">
-                  <div class="actions-cell">
-                    <button
-                      *ngIf="u.role === 'VENDOR'"
-                      class="action-icon-btn"
-                      title="View vendor's menu"
-                      (click)="viewMenu(u)"
-                    >
-                      <i class="bi bi-card-list"></i>
-                    </button>
-                    <div
-                      class="form-check form-switch toggle-switch"
-                      [title]="u.isActive ? 'Click to deactivate' : 'Click to activate'"
-                    >
-                      <input
-                        class="form-check-input"
-                        type="checkbox"
-                        role="switch"
-                        [checked]="u.isActive"
-                        [disabled]="togglingId() === u.userId"
-                        (change)="toggle(u)"
-                      />
-                    </div>
-                  </div>
-                </td>
-              </tr>
-
-              <tr *ngIf="filteredUsers().length === 0">
-                <td colspan="7" class="empty-row">
-                  <i class="bi bi-inbox"></i>
-                  <span>No users match the current filters.</span>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+      <!-- Quick actions -->
+      <div class="actions-grid" *ngIf="!loading()">
+        <a class="action-card" routerLink="/admin/users">
+          <div class="action-icon"><i class="bi bi-people-fill"></i></div>
+          <div class="action-body">
+            <div class="action-title">Manage Users</div>
+            <div class="action-sub">Review employees and vendors, toggle account status.</div>
+          </div>
+          <i class="bi bi-arrow-right action-arrow"></i>
+        </a>
       </div>
 
     </main>
