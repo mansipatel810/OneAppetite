@@ -57,7 +57,8 @@ public class OrderController {
                 user.getEmail(),
                 user.getPhone(),
                 user.getRole().name(),
-                user.getIsActive()
+                user.getIsActive(),
+                user.getWalletBalance() == null ? 0.0 : user.getWalletBalance()
         );
 
         VendorDTO vendorDTO = new VendorDTO(

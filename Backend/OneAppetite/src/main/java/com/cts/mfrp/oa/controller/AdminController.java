@@ -31,11 +31,18 @@ public class AdminController {
         return ResponseEntity.ok(adminService.getAllEmployees());
     }
 
+    @GetMapping("/users")
+    public ResponseEntity<List<UserResponse>> getAllUsers(
+            @RequestHeader(value = "X-User-Id", required = false) Integer callerId) {
+        adminService.verifyAdmin(callerId);
+        return ResponseEntity.ok(adminService.getAllUsers());
+    }
+
     @PutMapping("/users/{userId}/toggle-status")
     public ResponseEntity<UserResponse> toggleUserStatus(
             @RequestHeader(value = "X-User-Id", required = false) Integer callerId,
             @PathVariable Integer userId) {
         adminService.verifyAdmin(callerId);
-        return ResponseEntity.ok(adminService.toggleUserStatus(userId));
+        return ResponseEntity.ok(adminService.toggleUserStatus(callerId, userId));
     }
 }
