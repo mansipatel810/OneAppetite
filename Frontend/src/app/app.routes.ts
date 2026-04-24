@@ -10,7 +10,7 @@ import { AdminUsersComponent } from './admin/admin-users/admin-users.component';
 import { adminGuard } from './guards/admin.guard';
 
 export const routes: Routes = [
-  { path: 'admin/dashboard', component: DashboardComponent },
+  { path: 'admin/dashboard', component: AdminUsersComponent },
   { path: 'vendor/dashboard', component: VendorKanbanComponent },
 
   // ── Public (no sidebar/navbar) ────────────────────────────────
@@ -18,11 +18,11 @@ export const routes: Routes = [
   { path: 'register', component: RegisterComponent },
 
   // Admin-only user management screen (US-01 + US-02)
-  {
-    path: 'admin/users',
-    component: AdminUsersComponent,
-    canActivate: [adminGuard],
-  },
+  // {
+  //   path: 'admin/users',
+  //   component: AdminUsersComponent,
+  //   canActivate: [adminGuard],
+  // },
 
   // Default redirect: root → login
   { path: '', redirectTo: 'login', pathMatch: 'full' },
