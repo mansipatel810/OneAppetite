@@ -59,4 +59,7 @@ public class User {
     @Column(name = "notifications_enabled", nullable = false)
     private Boolean notificationsEnabled = true;  // sensible default
 
+    @Column(name = "dietary_preference", length = 20)
+    private String dietaryPreference; // VEG, NON_VEG, JAIN
+
 }

@@ -70,6 +70,14 @@
     </span>
   </div>
 
+  <!-- Dietary filter indicator -->
+  <div class="dietary-filter-banner" *ngIf="dietaryFilter">
+    <i class="bi bi-funnel-fill"></i>
+    Showing <strong>{{ dietaryFilter === 'NON_VEG' ? 'Non-Veg' : (dietaryFilter | titlecase) }}</strong> items only
+    · based on your preferences
+    <a routerLink="/user/settings" class="change-link">Change</a>
+  </div>
+
   <!-- ── Loading Skeleton ───────────────────────────────────────── -->
   <div class="skeleton-grid" *ngIf="isLoading">
     <div class="skeleton-card" *ngFor="let _ of [1,2,3,4,5,6]">
@@ -125,6 +133,12 @@
 
         <div class="card-footer">
           <span class="item-price">₹{{ item.price | number:'1.2-2' }}</span>
+
+          <button class="fav-btn" (click)="toggleFavorite(item)"
+                [title]="isFav(item) ? 'Remove from favourites' : 'Add to favourites'">
+            <i class="bi" [class.bi-heart-fill]="isFav(item)" [class.bi-heart]="!isFav(item)"
+              [style.color]="isFav(item) ? '#ef4444' : '#9ca3af'"></i>
+          </button>
 
           <button
             class="add-btn"
