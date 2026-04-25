@@ -62,4 +62,7 @@ public class User {
     @Column(name = "notifications_enabled", nullable = false)
     private Boolean notificationsEnabled = false;
 
+    @Column(name = "notifications_enabled", nullable = false)
+    private Boolean notificationsEnabled = true;  // sensible default
+
 }

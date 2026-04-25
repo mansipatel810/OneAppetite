@@ -24,11 +24,11 @@ export const routes: Routes = [
   { path: 'register', component: RegisterComponent },
 
   // Admin-only user management screen (US-01 + US-02)
-  {
-    path: 'admin/users',
-    component: AdminUsersComponent,
-    canActivate: [adminGuard],
-  },
+  // {
+  //   path: 'admin/users',
+  //   component: AdminUsersComponent,
+  //   canActivate: [adminGuard],
+  // },
 
   // Admin-only read-only view of any vendor's menu
   {
