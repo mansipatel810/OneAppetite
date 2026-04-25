@@ -54,7 +54,16 @@ public class User {
     private Boolean notificationsEnabled = true;
 
     @Column(name = "vendor_type", length = 20)
-    private String vendorType;
+    private VendorType vendorType;
+
+    @Column(name = "daily_topup_date")
+    private java.time.LocalDate dailyTopUpDate;
+
+    @Column(name = "daily_topup_total")
+    private Double dailyTopUpTotal = 0.0;
+
+    @Column(name = "notifications_enabled", nullable = false)
+    private Boolean notificationsEnabled = false;
 
     @Column(name = "notifications_enabled", nullable = false)
     private Boolean notificationsEnabled = true;  // sensible default

@@ -9,4 +9,6 @@ public interface OrderItemRepository extends JpaRepository<OrderItem, Integer> {
 
     // Add this line to fetch all items for an order
     List<OrderItem> findByOrder_OrderId(Integer orderId);
+
+    boolean existsByMenuItem_ItemId(Integer itemId);
 }

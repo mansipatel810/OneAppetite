@@ -7,10 +7,16 @@ import { ShellComponent }      from './shell/shell.component';
 import { MenuComponent }       from './menu/menu.component';
 import { CartViewComponent }   from './cart-view/cart-view.component';
 import { AdminUsersComponent } from './admin/admin-users/admin-users.component';
+import { AdminDashboardComponent } from './admin/admin-dashboard/admin-dashboard.component';
+import { AdminVendorMenuComponent } from './admin/admin-vendor-menu/admin-vendor-menu.component';
 import { adminGuard } from './guards/admin.guard';
 
 export const routes: Routes = [
-  { path: 'admin/dashboard', component: AdminUsersComponent },
+  {
+    path: 'admin/dashboard',
+    component: AdminDashboardComponent,
+    canActivate: [adminGuard],
+  },
   { path: 'vendor/dashboard', component: VendorKanbanComponent },
 
   // ── Public (no sidebar/navbar) ────────────────────────────────
@@ -23,6 +29,13 @@ export const routes: Routes = [
   //   component: AdminUsersComponent,
   //   canActivate: [adminGuard],
   // },
+
+  // Admin-only read-only view of any vendor's menu
+  {
+    path: 'admin/vendors/:vendorId/menu',
+    component: AdminVendorMenuComponent,
+    canActivate: [adminGuard],
+  },
 
   // Default redirect: root → login
   { path: '', redirectTo: 'login', pathMatch: 'full' },

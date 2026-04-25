@@ -6,6 +6,7 @@ import com.cts.mfrp.oa.model.OrderItem;
 import com.cts.mfrp.oa.model.MenuItem;
 import com.cts.mfrp.oa.model.OrderStatus;
 import com.cts.mfrp.oa.model.User;
+import com.cts.mfrp.oa.service.AuthGuardService;
 import com.cts.mfrp.oa.service.OrderService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -21,9 +22,15 @@ public class OrderController {
     @Autowired
     private OrderService orderService;
 
+    @Autowired
+    private AuthGuardService authGuard;
+
     @PutMapping("/{orderId}/status")
-    public ResponseEntity<OrderDTO> updateStatus(@PathVariable Integer orderId,
-                                                 @RequestParam OrderStatus status) {
+    public ResponseEntity<OrderDTO> updateStatus(
+            @RequestHeader(value = "X-User-Id", required = false) Integer callerId,
+            @PathVariable Integer orderId,
+            @RequestParam OrderStatus status) {
+        authGuard.verifyVendor(callerId);
         Order updatedOrder = orderService.updateOrderStatus(orderId, status);
 
         OrderDTO dto = convertToDTO(updatedOrder);
@@ -68,7 +75,7 @@ public class OrderController {
                 order.getVendor().getPhone(),
                 order.getVendor().getIsActive(),
                 order.getVendor().getVendorName(),
-                order.getVendor().getVendorType()
+                order.getVendor().getVendorType() == null ? null : order.getVendor().getVendorType().name()
         );
 
         return new OrderDTO(
@@ -93,7 +100,7 @@ public class OrderController {
                 menuItem.getVendor().getPhone(),
                 menuItem.getVendor().getIsActive(),
                 menuItem.getVendor().getVendorName(),
-                menuItem.getVendor().getVendorType()
+                menuItem.getVendor().getVendorType() == null ? null : menuItem.getVendor().getVendorType().name()
         );
 
         MenuItemDTO menuItemDTO = new MenuItemDTO(

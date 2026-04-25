@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Random;
 import java.util.List;
+
 @Service
 public class OrderService {
     @Autowired
@@ -21,18 +22,18 @@ public class OrderService {
 
     public Order updateOrderStatus(Integer orderId, OrderStatus newStatus) {
         Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new RuntimeException("Order not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
 
         order.setStatus(newStatus);
         Order savedOrder = orderRepository.save(order);
         orderEventPublisher.publishOrderPlaced(savedOrder);
-        return orderRepository.save(order);
+        return savedOrder;
     }
-    
-        public List<Order> getOrdersByVendor(Integer vendorId) {
-            return orderRepository.findByVendor_UserIdAndStatusNot(vendorId, OrderStatus.CART);
-        }
-    
+
+    public List<Order> getOrdersByVendor(Integer vendorId) {
+        return orderRepository.findByVendor_UserIdAndStatusNot(vendorId, OrderStatus.CART);
+    }
+
     @Transactional
     public Order placeOrder(Integer userId){
         Order cart = orderRepository.findByUser_UserIdAndStatus(userId, OrderStatus.CART)
@@ -51,5 +52,4 @@ public class OrderService {
         }while(orderRepository.existsByTokenNumber(token));
         return token;
     }
-
 }

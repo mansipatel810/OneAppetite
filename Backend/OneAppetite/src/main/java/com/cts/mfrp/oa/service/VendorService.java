@@ -5,6 +5,7 @@ import com.cts.mfrp.oa.exception.ResourceNotFoundException;
 import com.cts.mfrp.oa.model.Building;
 import com.cts.mfrp.oa.model.Role;
 import com.cts.mfrp.oa.model.User;
+import com.cts.mfrp.oa.model.VendorType;
 import com.cts.mfrp.oa.repository.BuildingRepository;
 import com.cts.mfrp.oa.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,7 +33,23 @@ public class VendorService {
                 v.getVendorDescription(),
                 v.getBuilding().getBuildingId(),
                 v.getVendorImageUrl(),
-                v.getVendorType()
+                v.getVendorType() == null ? null : v.getVendorType().name()
+        )).toList();
+    }
+
+    public List<VendorRegisterResponse> getVendorsByBuildingAndType(Integer buildingId, VendorType type) {
+        List<User> vendors = userRepo.findByBuilding_BuildingIdAndRoleAndVendorType(buildingId, Role.VENDOR, type);
+        return vendors.stream().map(v -> new VendorRegisterResponse(
+                v.getUserId(),
+                v.getName(),
+                v.getEmail(),
+                v.getPhone(),
+                v.getRole().name(),
+                v.getVendorName(),
+                v.getVendorDescription(),
+                v.getBuilding().getBuildingId(),
+                v.getVendorImageUrl(),
+                v.getVendorType() == null ? null : v.getVendorType().name()
         )).toList();
     }
 

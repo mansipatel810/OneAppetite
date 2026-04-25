@@ -2,6 +2,8 @@ package com.cts.mfrp.oa.service;
 
 import com.cts.mfrp.oa.dto.request.CartRequest;
 import com.cts.mfrp.oa.dto.response.*;
+import com.cts.mfrp.oa.exception.InvalidCartStateException;
+import com.cts.mfrp.oa.exception.ResourceNotFoundException;
 import com.cts.mfrp.oa.model.*;
 import com.cts.mfrp.oa.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,18 +20,23 @@ public class OrderItemService {
     @Autowired private MenuItemRepository menuRepo;
     @Autowired private UserRepository userRepo;
     @Autowired private WalletService walletService;
+    @Autowired private TokenService tokenService;
 
     @Transactional
     public OrderItemDTO addProductToCart(CartRequest request) {
-        MenuItem item = menuRepo.findById(request.menuItemId())
-                .orElseThrow(() -> new RuntimeException("Item not found"));
+        if (request.quantity() == null || request.quantity() <= 0) {
+            throw new IllegalArgumentException("Quantity must be at least 1");
+        }
+
+        MenuItem item = menuRepo.findForUpdate(request.menuItemId())
+                .orElseThrow(() -> new ResourceNotFoundException("Item not found"));
 
         if (!item.getIsInStock() || item.getQuantityAvailable() <= 0) {
-            throw new RuntimeException("Sorry, " + item.getItemName() + " is currently out of stock.");
+            throw new InvalidCartStateException("Sorry, " + item.getItemName() + " is currently out of stock.");
         }
 
         if (item.getQuantityAvailable() < request.quantity()) {
-            throw new RuntimeException("Insufficient stock.");
+            throw new InvalidCartStateException("Insufficient stock.");
         }
 
         int remainingStock = item.getQuantityAvailable() - request.quantity();
@@ -51,7 +58,7 @@ public class OrderItemService {
                 });
 
         if (!cart.getVendor().getUserId().equals(item.getVendor().getUserId())) {
-            throw new RuntimeException("You can only add items from " + cart.getVendor().getName() + " to this cart.");
+            throw new InvalidCartStateException("You can only add items from " + cart.getVendor().getName() + " to this cart.");
         }
 
         OrderItem resultItem;
@@ -77,7 +84,7 @@ public class OrderItemService {
 
     public CartResponseDTO getActiveCart(Integer userId) {
         Order cart = orderRepo.findByUser_UserIdAndStatus(userId, OrderStatus.CART)
-                .orElseThrow(() -> new RuntimeException("No active cart found for user ID: " + userId));
+                .orElseThrow(() -> new ResourceNotFoundException("No active cart found for user ID: " + userId));
 
         return mapToCartDTO(cart);
     }
@@ -90,15 +97,18 @@ public class OrderItemService {
     @Transactional
     public CartResponseDTO placeOrder(Integer userId) {
         Order cart = orderRepo.findByUser_UserIdAndStatus(userId, OrderStatus.CART)
-                .orElseThrow(() -> new RuntimeException("No active cart found for user ID: " + userId));
+                .orElseThrow(() -> new ResourceNotFoundException("No active cart found for user ID: " + userId));
 
         Float total = cart.getTotalAmount();
         if (total == null || total <= 0f) {
-            throw new RuntimeException("Cart is empty.");
+            throw new InvalidCartStateException("Cart is empty.");
         }
 
         walletService.debit(userId, total.doubleValue());
 
+        if (cart.getTokenNumber() == null) {
+            cart.setTokenNumber(tokenService.generateUniqueToken());
+        }
         cart.setStatus(OrderStatus.PLACED);
         cart.setOrderTime(LocalDateTime.now());
         return mapToCartDTO(orderRepo.save(cart));
@@ -108,7 +118,7 @@ public class OrderItemService {
         User v = order.getVendor();
         VendorDTO vendorDTO = new VendorDTO(
                 v.getUserId(), v.getName(), v.getEmail(),
-                v.getPhone(), v.getIsActive(), v.getVendorName(), v.getVendorType()
+                v.getPhone(), v.getIsActive(), v.getVendorName(), v.getVendorType() == null ? null : v.getVendorType().name()
         );
 
         List<OrderItemDTO> itemDTOs = order.getOrderItems().stream()
@@ -131,7 +141,7 @@ public class OrderItemService {
         User v = entity.getMenuItem().getVendor();
         VendorDTO vendorDTO = new VendorDTO(
                 v.getUserId(), v.getName(), v.getEmail(),
-                v.getPhone(), v.getIsActive(), v.getVendorName(), v.getVendorType()
+                v.getPhone(), v.getIsActive(), v.getVendorName(), v.getVendorType() == null ? null : v.getVendorType().name()
         );
 
         MenuItem m = entity.getMenuItem();
@@ -167,25 +177,38 @@ public class OrderItemService {
     @Transactional
     public void reduceQuantity(Integer orderItemId) {
         OrderItem item = itemRepo.findById(orderItemId)
-                .orElseThrow(() -> new RuntimeException("Item not found in cart"));
+                .orElseThrow(() -> new ResourceNotFoundException("Item not found in cart"));
 
         Order order = item.getOrder();
-        MenuItem menuItem = item.getMenuItem();
-
-        menuItem.setQuantityAvailable(menuItem.getQuantityAvailable() + 1);
-        menuItem.setIsInStock(true);
-        menuRepo.saveAndFlush(menuItem);
+        MenuItem menuItem = menuRepo.findForUpdate(item.getMenuItem().getItemId())
+                .orElseThrow(() -> new ResourceNotFoundException("Menu item not found"));
 
         if (item.getQuantity() > 1) {
+            menuItem.setQuantityAvailable(menuItem.getQuantityAvailable() + 1);
+            menuItem.setIsInStock(true);
+            menuRepo.saveAndFlush(menuItem);
+
             item.setQuantity(item.getQuantity() - 1);
             item.setPrice((float) (menuItem.getPrice() * item.getQuantity()));
             itemRepo.save(item);
+            itemRepo.flush();
+            updateOrderAggregates(order);
         } else {
-            itemRepo.delete(item);
-        }
+            menuItem.setQuantityAvailable(menuItem.getQuantityAvailable() + item.getQuantity());
+            menuItem.setIsInStock(true);
+            menuRepo.saveAndFlush(menuItem);
 
-        itemRepo.flush();
-        updateOrderAggregates(order);
+            itemRepo.delete(item);
+            itemRepo.flush();
+
+            long remaining = itemRepo.findByOrder_OrderId(order.getOrderId()).size();
+            if (remaining == 0 && order.getStatus() == OrderStatus.CART) {
+                orderRepo.delete(order);
+                orderRepo.flush();
+            } else {
+                updateOrderAggregates(order);
+            }
+        }
     }
 
     public Float getCartTotal(Integer userId) {

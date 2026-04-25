@@ -120,6 +120,12 @@ export class AdminUsersComponent implements OnInit {
     this.roleFilter.set(role);
   }
 
+  /** Navigate to the read-only vendor menu view. */
+  viewMenu(u: UserResponse): void {
+    if (u.role !== 'VENDOR') return;
+    this.router.navigate(['/admin/vendors', u.userId, 'menu']);
+  }
+
   /** Flip a user's active flag. Blocks self-toggle to prevent lockout. */
   toggle(u: UserResponse): void {
     if (this.user && u.userId === this.user.userId) {

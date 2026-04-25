@@ -116,7 +116,7 @@ public class AuthService {
                 saved.getVendorDescription(),
                 saved.getBuilding().getBuildingId(),
                 saved.getVendorImageUrl(),
-                saved.getVendorType()
+                saved.getVendorType() == null ? null : saved.getVendorType().name()
         );
     }
 
@@ -136,10 +136,7 @@ public class AuthService {
         }
 
         if (user.getRole() != requestedRole) {
-            throw new InvalidCredentialsException(
-                    "No " + requestedRole.name().toLowerCase() + " account found for this email. "
-                            + "Your account is registered as " + user.getRole().name().toLowerCase() + "."
-            );
+            throw new InvalidCredentialsException("Invalid email or password.");
         }
         if (!Boolean.TRUE.equals(user.getIsActive())) {
             throw new InvalidCredentialsException("Your account has been deactivated. Please contact an administrator.");
