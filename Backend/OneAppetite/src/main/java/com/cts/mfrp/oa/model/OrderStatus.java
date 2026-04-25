@@ -6,5 +6,6 @@ public enum OrderStatus {
     PREPARING,
     PENDING,
     READY,
-    CART
+    CART,
+    COMPLETED
 }

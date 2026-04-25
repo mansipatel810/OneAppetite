@@ -13,5 +13,5 @@ public interface OrderRepository extends JpaRepository<Order, Integer> {
     List<Order> findByUser_UserIdAndStatusNotOrderByOrderTimeDesc(Integer userId, OrderStatus status);
 
     boolean existsByTokenNumber(String tokenNumber);
-    List<Order> findByVendor_UserIdAndStatusNot(Integer vendorId, OrderStatus status);
+    List<Order> findByVendor_UserIdAndStatusNot(Integer vendorId,OrderStatus status);
 }
