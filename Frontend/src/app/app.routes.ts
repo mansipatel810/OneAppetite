@@ -7,17 +7,29 @@ import { ShellComponent }      from './shell/shell.component';
 import { MenuComponent }       from './menu/menu.component';
 import { CartViewComponent }   from './cart-view/cart-view.component';
 import { VendorMenuComponent } from './vendor-menu-view/vendor-menu.component';
-import { UserSettingsComponent } from './user-settings/user-settings.component';
+import { AdminUsersComponent } from './admin/admin-users/admin-users.component';
+import { adminGuard } from './guards/admin.guard';
 
 export const routes: Routes = [
-  { path: 'admin/dashboard', component: DashboardComponent },
+  { path: 'admin/dashboard', component: AdminUsersComponent },
   { path: 'vendor/dashboard', component: VendorKanbanComponent },
+
   // ── Public (no sidebar/navbar) ────────────────────────────────
   { path: 'login',    component: LoginComponent },
   { path: 'register', component: RegisterComponent },
   { path: 'vendor/menu', component: VendorMenuComponent },
-  { path: 'user/settings', component: UserSettingsComponent },
   
+
+  // Admin-only user management screen (US-01 + US-02)
+  // {
+  //   path: 'admin/users',
+  //   component: AdminUsersComponent,
+  //   canActivate: [adminGuard],
+  // },
+
+  // Default redirect: root → login
+  { path: '', redirectTo: 'login', pathMatch: 'full' },
+
   // ── Authenticated (inside ShellComponent) ─────────────────────
   {
     path: '',
@@ -29,5 +41,6 @@ export const routes: Routes = [
     ]
   },
 
+  // Catch-all → login
   { path: '**', redirectTo: 'login' },
 ];

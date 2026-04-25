@@ -6,5 +6,6 @@ public record UserResponse(
         String email,
         String phone,
         String role,
-        Boolean isActive
+        Boolean isActive,
+        Double walletBalance
 ) {}

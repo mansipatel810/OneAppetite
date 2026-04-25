@@ -53,4 +53,7 @@ public class User {
     @Column(name = "vendor_type", length = 20)
     private String vendorType;
 
+    @Column(name = "notifications_enabled", nullable = false)
+    private Boolean notificationsEnabled = true;  // sensible default
+
 }

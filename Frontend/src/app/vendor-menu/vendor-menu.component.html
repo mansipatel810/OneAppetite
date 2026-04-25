@@ -1,0 +1,216 @@
+<div class="app-shell">
+
+  <!-- ─── Mobile Top Nav ───────────────────────────────────────── -->
+  <header class="mobile-nav">
+    <div class="mobile-nav-logo">
+      <div class="logo-mark"><i class="bi bi-geo-fill"></i></div>
+      <span class="logo-text">One Appetite</span>
+    </div>
+    <div class="mobile-nav-right">
+      <i class="bi bi-bell topbar-icon"></i>
+      <div class="avatar-circle">{{ initials(user?.name ?? '') }}</div>
+      <button class="hamburger" (click)="toggleMobileMenu()">
+        <i class="bi" [ngClass]="mobileMenuOpen ? 'bi-x-lg' : 'bi-list'"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- ─── Mobile Overlay ───────────────────────────────────────── -->
+  <div class="mobile-overlay" [class.open]="mobileMenuOpen" (click)="toggleMobileMenu()"></div>
+
+  <!-- ─── Sidebar ──────────────────────────────────────────────── -->
+  <aside class="sidebar" [class.mobile-open]="mobileMenuOpen">
+    <div class="sidebar-logo">
+      <div class="logo-mark"><i class="bi bi-geo-fill"></i></div>
+      <span class="logo-text">One Appetite</span>
+    </div>
+
+    <nav class="sidebar-nav">
+      <p class="nav-section-label">Navigation</p>
+      <a class="nav-item" routerLink="/dashboard" (click)="closeMobileMenu()">
+        <i class="bi bi-grid-fill"></i> Dashboard
+      </a>
+      <a class="nav-item active">
+        <i class="bi bi-menu-button-wide-fill"></i> Vendor Menu
+      </a>
+
+      <ng-container *ngIf="user?.role === 'ADMIN'">
+        <p class="nav-section-label" style="margin-top: 18px;">Admin</p>
+        <a class="nav-item" routerLink="/admin/users" (click)="closeMobileMenu()">
+          <i class="bi bi-people-fill"></i> Manage Users
+        </a>
+      </ng-container>
+    </nav>
+
+    <div class="sidebar-footer">
+      <button class="nav-item logout-btn" (click)="logout()">
+        <i class="bi bi-box-arrow-right"></i> Logout
+      </button>
+    </div>
+  </aside>
+
+  <!-- ─── Main ─────────────────────────────────────────────────── -->
+  <div class="main-area">
+
+    <!-- Desktop Top Bar -->
+    <header class="topbar">
+      <div class="breadcrumb">
+        <button class="back-btn-crumb" (click)="back()" title="Back to dashboard">
+          <i class="bi bi-arrow-left"></i>
+        </button>
+        <span class="bc-step">Dashboard</span>
+        <i class="bi bi-chevron-right bc-sep"></i>
+        <span class="bc-active">{{ vendorName() }}</span>
+      </div>
+
+      <div class="topbar-right">
+        <span class="role-pill" *ngIf="user">{{ user.role }}</span>
+        <i class="bi bi-bell topbar-icon"></i>
+        <div class="avatar-circle">{{ initials(user?.name ?? '') }}</div>
+      </div>
+    </header>
+
+    <!-- Content -->
+    <main class="content-area">
+
+      <!-- Error banner -->
+      <div class="error-banner" *ngIf="error()">
+        <i class="bi bi-exclamation-triangle-fill"></i>
+        <span>{{ error() }}</span>
+        <button class="dismiss-btn" (click)="dismissError()" aria-label="Dismiss">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+
+      <!-- Loading state -->
+      <div class="loading-state" *ngIf="loading()">
+        <div class="spinner-border" role="status"></div>
+        <p>Loading menu…</p>
+      </div>
+
+      <!-- Vendor header + content -->
+      <ng-container *ngIf="!loading()">
+
+        <!-- Hero -->
+        <div class="vendor-hero">
+          <div class="vendor-hero-main">
+            <div class="vendor-avatar">
+              <i class="bi bi-shop"></i>
+            </div>
+            <div class="vendor-hero-text">
+              <h1>{{ vendorName() }}</h1>
+              <p *ngIf="vendorDescription()">{{ vendorDescription() }}</p>
+              <div class="vendor-hero-meta">
+                <span class="meta-pill" *ngIf="vendorType()">
+                  <i class="bi bi-tag-fill"></i> {{ vendorType() }}
+                </span>
+                <span class="meta-pill">
+                  <i class="bi bi-list-ul"></i>
+                  {{ items().length }} item{{ items().length === 1 ? '' : 's' }}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Course filter -->
+        <div class="course-tabs" *ngIf="items().length > 0">
+          <button
+            class="course-tab"
+            [class.active]="courseFilter() === 'ALL'"
+            (click)="setCourse('ALL')"
+          ><i class="bi bi-collection"></i> All</button>
+          <button
+            class="course-tab"
+            [class.active]="courseFilter() === 'Breakfast'"
+            (click)="setCourse('Breakfast')"
+          ><i class="bi bi-sunrise"></i> Breakfast</button>
+          <button
+            class="course-tab"
+            [class.active]="courseFilter() === 'Lunch'"
+            (click)="setCourse('Lunch')"
+          ><i class="bi bi-sun"></i> Lunch</button>
+          <button
+            class="course-tab"
+            [class.active]="courseFilter() === 'Dinner'"
+            (click)="setCourse('Dinner')"
+          ><i class="bi bi-moon-stars"></i> Dinner</button>
+        </div>
+
+        <!-- Groups -->
+        <ng-container *ngIf="items().length > 0; else emptyTpl">
+          <section class="course-group" *ngFor="let g of groupedItems()">
+            <header class="course-header">
+              <h2>{{ g.course }}</h2>
+              <span class="count-pill">{{ g.items.length }}</span>
+            </header>
+
+            <div class="menu-grid">
+              <article class="menu-card" *ngFor="let it of g.items" [class.oos]="!it.isInStock">
+                <div class="menu-card-img">
+                  <img *ngIf="it.imageUrl" [src]="it.imageUrl" [alt]="it.itemName" />
+                  <div *ngIf="!it.imageUrl" class="menu-img-placeholder">
+                    <i class="bi bi-egg-fried"></i>
+                  </div>
+                  <span [ngClass]="dietaryClass(it.dietaryType)">
+                    <i class="bi bi-circle-fill"></i> {{ it.dietaryType }}
+                  </span>
+                </div>
+
+                <div class="menu-card-body">
+                  <h3 class="menu-item-name">{{ it.itemName }}</h3>
+                  <p class="menu-item-meta">
+                    <span>{{ it.category }}</span>
+                    <span class="sep">·</span>
+                    <span>{{ it.mealCourse }}</span>
+                  </p>
+
+                  <div class="menu-card-footer">
+                    <div class="price">{{ it.price | currency:'INR':'symbol':'1.2-2' }}</div>
+                    <span
+                      class="stock-pill"
+                      [class.in-stock]="it.isInStock"
+                      [class.out-of-stock]="!it.isInStock"
+                    >
+                      <span class="status-dot"></span>
+                      {{ it.isInStock ? 'In stock' : 'Out of stock' }}
+                    </span>
+                  </div>
+
+                  <div class="qty-note" *ngIf="it.isInStock && it.quantityAvailable > 0">
+                    <i class="bi bi-box-seam"></i>
+                    {{ it.quantityAvailable }} available
+                  </div>
+                </div>
+              </article>
+            </div>
+          </section>
+
+          <div class="empty-sub" *ngIf="groupedItems().length === 0">
+            <i class="bi bi-funnel"></i>
+            <span>No items in this course.</span>
+          </div>
+        </ng-container>
+
+        <ng-template #emptyTpl>
+          <div class="empty-state">
+            <i class="bi bi-inbox empty-icon"></i>
+            <h3>No menu items yet</h3>
+            <p>This vendor hasn't published any items. Check back soon.</p>
+          </div>
+        </ng-template>
+      </ng-container>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="app-footer">
+      <span>© 2026 One Appetite. Corporate Cafeteria Solutions.</span>
+      <div class="footer-links">
+        <a href="#">Support</a>
+        <a href="#">Terms of Service</a>
+        <a href="#">Privacy Policy</a>
+      </div>
+    </footer>
+  </div>
+</div>
