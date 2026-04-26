@@ -8,6 +8,24 @@
       "^/api": ""
     }
   },
+  "/api/menu": {
+    "target": "http://localhost:8081",
+    "secure": false,
+    "changeOrigin": true,
+    "logLevel": "debug",
+    "pathRewrite": {
+      "^/api": ""
+    }
+  },
+  "/api/vendors": {
+    "target": "http://localhost:8081",
+    "secure": false,
+    "changeOrigin": true,
+    "logLevel": "debug",
+    "pathRewrite": {
+      "^/api": ""
+    }
+  },
   "/api": {
     "target": "http://localhost:8081",
     "secure": false,

@@ -8,7 +8,8 @@ import { MenuComponent }       from './menu/menu.component';
 import { CartViewComponent }   from './cart-view/cart-view.component';
 import { AdminUsersComponent } from './admin/admin-users/admin-users.component';
 import { adminGuard } from './guards/admin.guard';
-
+import { UserSettingsComponent } from './user-settings/user-settings.component';
+import { VendorMenuViewComponent } from './vendor-menu-view/vendor-menu-view.component';
 export const routes: Routes = [
   { path: 'admin/dashboard', component: AdminUsersComponent },
   { path: 'vendor/dashboard', component: VendorKanbanComponent },
@@ -16,7 +17,8 @@ export const routes: Routes = [
   // ── Public (no sidebar/navbar) ────────────────────────────────
   { path: 'login',    component: LoginComponent },
   { path: 'register', component: RegisterComponent },
-
+  { path: 'vendor/menu',      component: VendorMenuViewComponent },
+  { path: 'user/settings',    component: UserSettingsComponent },
   // Admin-only user management screen (US-01 + US-02)
   // {
   //   path: 'admin/users',

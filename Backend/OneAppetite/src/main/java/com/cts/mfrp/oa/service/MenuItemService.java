@@ -1,6 +1,7 @@
 package com.cts.mfrp.oa.service;
 
 import com.cts.mfrp.oa.dto.response.MenuItemResponse;
+import com.cts.mfrp.oa.exception.ResourceNotFoundException;
 import com.cts.mfrp.oa.model.MenuItem;
 import com.cts.mfrp.oa.model.Role;
 import com.cts.mfrp.oa.model.User;
@@ -57,6 +58,23 @@ public class MenuItemService {
         return menuItemRepo.findByVendor(vendor).stream()
                 .map(this::toResponse)
                 .toList();
+    }
+
+    public MenuItemResponse toggleStock(Integer vendorId, Integer itemId) {
+        User vendor = validateVendor(vendorId);
+        MenuItem existing = menuItemRepo.findById(itemId)
+                .orElseThrow(() -> new ResourceNotFoundException("Menu item not found: " + itemId));
+
+        if (!existing.getVendor().equals(vendor)) {
+            throw new IllegalArgumentException("Vendor does not own this menu item");
+        }
+
+        existing.setIsInStock(!existing.getIsInStock());
+        if (existing.getQuantityAvailable() == null) {
+            existing.setQuantityAvailable(0);
+        }
+        MenuItem saved = menuItemRepo.save(existing);
+        return toResponse(saved);
     }
 
     // UPDATE

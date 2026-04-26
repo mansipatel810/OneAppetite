@@ -4,6 +4,7 @@ import com.cts.mfrp.oa.dto.response.MenuItemResponse;
 import com.cts.mfrp.oa.model.MenuItem;
 import com.cts.mfrp.oa.service.MenuItemService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.stream.Collectors;
 
@@ -25,6 +26,13 @@ public class MenuItemController {
     @GetMapping("/vendor/{vendorId}")
     public List<MenuItemResponse> getMenuItemsByVendor(@PathVariable Integer vendorId) {
         return menuItemService.getMenuItemsByVendor(vendorId);
+    }
+
+    @PutMapping("/vendor/{vendorId}/item/{itemId}/toggle-stock")
+    public ResponseEntity<MenuItemResponse> toggleStock(
+            @PathVariable Integer vendorId,
+            @PathVariable Integer itemId) {
+        return ResponseEntity.ok(menuItemService.toggleStock(vendorId, itemId));
     }
 
     // UPDATE
