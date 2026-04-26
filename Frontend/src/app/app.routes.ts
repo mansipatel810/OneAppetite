@@ -6,6 +6,7 @@ import { VendorKanbanComponent } from './vendor-kanban/vendor-kanban.component';
 import { ShellComponent }      from './shell/shell.component';
 import { MenuComponent }       from './menu/menu.component';
 import { CartViewComponent }   from './cart-view/cart-view.component';
+import { VendorMenuComponent } from './vendor-menu-view/vendor-menu.component';
 import { AdminUsersComponent } from './admin/admin-users/admin-users.component';
 import { adminGuard } from './guards/admin.guard';
 
@@ -16,6 +17,8 @@ export const routes: Routes = [
   // ── Public (no sidebar/navbar) ────────────────────────────────
   { path: 'login',    component: LoginComponent },
   { path: 'register', component: RegisterComponent },
+  { path: 'vendor/menu', component: VendorMenuComponent },
+  
 
   // Admin-only user management screen (US-01 + US-02)
   // {

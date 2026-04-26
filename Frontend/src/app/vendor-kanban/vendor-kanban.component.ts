@@ -1,6 +1,6 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { PLATFORM_ID, Inject } from '@angular/core';
 import { AuthService } from '../services/auth.service';
 import { OrderService, VendorOrder } from '../services/order.service';
@@ -8,7 +8,7 @@ import { OrderService, VendorOrder } from '../services/order.service';
 @Component({
   selector: 'app-vendor-kanban',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, RouterLink],
   templateUrl: './vendor-kanban.component.html',
 })
 export class VendorKanbanComponent implements OnInit, OnDestroy {
@@ -42,7 +42,7 @@ export class VendorKanbanComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     if (!isPlatformBrowser(this.platformId)) return;
-
+    this.audio = new Audio('/orderPlaced.mp3');
     const session = this.authService.getSession();
     if (!session || session.role !== 'VENDOR') {
       this.router.navigate(['/login']);
