@@ -1,0 +1,64 @@
+<div class="min-vh-100 bg-light">
+
+  <!-- Navbar -->
+  <nav class="navbar bg-white border-bottom px-4 py-2">
+    <span class="navbar-brand fw-bold text-primary">
+      <i class="bi bi-cup-straw me-2"></i>One Appetite — Menu Management
+    </span>
+    <div class="d-flex align-items-center gap-3">
+      <a routerLink="/vendor/dashboard" class="btn btn-outline-primary btn-sm">
+        <i class="bi bi-kanban me-1"></i> View Orders
+      </a>
+      <span class="small text-muted">{{ vendorName }}</span>
+      <button class="btn btn-outline-secondary btn-sm" (click)="logout()">
+        <i class="bi bi-box-arrow-right me-1"></i> Logout
+      </button>
+    </div>
+  </nav>
+
+  <div class="container py-4">
+    <h5 class="fw-semibold mb-4">Menu Items</h5>
+
+    @if (loading) {
+      <div class="text-center text-muted py-5">Loading menu...</div>
+    }
+
+    @if (error) {
+      <div class="alert alert-danger">{{ error }}</div>
+    }
+
+    @if (!loading) {
+      <div class="row g-3">
+        @for (item of menuItems; track item.itemId) {
+          <div class="col-md-4">
+            <div class="card border-0 shadow-sm rounded-4 h-100"
+                 [class.opacity-50]="!item.isInStock">
+              <div class="card-body p-3">
+
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                  <h6 class="fw-bold mb-0">{{ item.itemName }}</h6>
+                  @if (item.isInStock) {
+                    <span class="badge bg-success">In Stock</span>
+                  } @else {
+                    <span class="badge bg-danger">Out of Stock</span>
+                  }
+                </div>
+
+                <p class="text-muted small mb-1">{{ item.category }}</p>
+                <p class="fw-semibold mb-3">₹{{ item.price }}</p>
+
+                <button class="btn btn-sm w-100"
+                        [class.btn-danger]="item.isInStock"
+                        [class.btn-success]="!item.isInStock"
+                        (click)="toggleStock(item)">
+                  {{ item.isInStock ? 'Mark as Out of Stock' : 'Mark as In Stock' }}
+                </button>
+
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+    }
+  </div>
+</div>

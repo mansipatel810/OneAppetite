@@ -28,4 +28,10 @@ export class MenuService {
   getVendorById(vendorId: number): Observable<any> {
     return this.http.get<any>(`${this.baseUrl}/api/vendor/${vendorId}`);
   }
+
+  toggleStock(vendorId: number, itemId: number): Observable<MenuItem> {
+    return this.http.put<MenuItem>(
+      `/api/menu/vendor/${vendorId}/item/${itemId}/toggle-stock`, {}
+    );
+  }
 }
