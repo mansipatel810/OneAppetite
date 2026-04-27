@@ -18,6 +18,7 @@ public class OrderItemService {
     @Autowired private MenuItemRepository menuRepo;
     @Autowired private UserRepository userRepo;
     @Autowired private WalletService walletService;
+    @Autowired private NotificationService notificationService;
 
     @Transactional
     public OrderItemDTO addProductToCart(CartRequest request) {
@@ -101,7 +102,16 @@ public class OrderItemService {
 
         cart.setStatus(OrderStatus.PLACED);
         cart.setOrderTime(LocalDateTime.now());
-        return mapToCartDTO(orderRepo.save(cart));
+        Order saved = orderRepo.save(cart);
+
+        // Notifications: customer + vendor
+        String label = saved.getTokenNumber() != null ? saved.getTokenNumber() : ("#" + saved.getOrderId());
+        notificationService.push(userId, "Order " + label + " placed successfully");
+        if (saved.getVendor() != null) {
+            notificationService.push(saved.getVendor().getUserId(),
+                    "New order " + label + " received");
+        }
+        return mapToCartDTO(saved);
     }
 
     private CartResponseDTO mapToCartDTO(Order order) {

@@ -1,14 +1,17 @@
-import { Component, OnInit, signal } from '@angular/core';
+import { Component, OnInit, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AuthService, LoginPayload, UserRole } from '../services/auth.service';
+import { ToastService } from '../services/toast.service';
+import { ForgotPasswordModalComponent } from '../forgot-password/forgot-password-modal.component';
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterLink],
+  imports: [CommonModule, ReactiveFormsModule, RouterLink, ForgotPasswordModalComponent],
   templateUrl: './login.component.html',
+  styleUrls: ['./login.component.css'],
 })
 export class LoginComponent implements OnInit {
   loginForm!: FormGroup;
@@ -17,8 +20,11 @@ export class LoginComponent implements OnInit {
   isSubmitting = signal(false);
   serverError = signal('');
   showRegisteredBanner = signal(false);
+  showForgotPassword = signal(false);
 
   roles: UserRole[] = ['EMPLOYEE', 'VENDOR', 'ADMIN'];
+
+  private toast = inject(ToastService);
 
   constructor(
     private fb: FormBuilder,
@@ -55,6 +61,18 @@ export class LoginComponent implements OnInit {
     this.serverError.set('');
   }
 
+  comingSoon(provider: string): void {
+    this.toast.info(`${provider} sign-in is coming soon — please use email & password for now.`);
+  }
+
+  openForgotPassword(event?: Event): void {
+    event?.preventDefault();
+    this.showForgotPassword.set(true);
+  }
+  closeForgotPassword(): void {
+    this.showForgotPassword.set(false);
+  }
+
   onSubmit(): void {
     console.log('[LoginComponent] onSubmit() fired');
     console.log('[LoginComponent] Form status ->', this.loginForm.status);
@@ -77,28 +95,19 @@ export class LoginComponent implements OnInit {
     this.authService.login(payload).subscribe({
       next: (response) => {
         this.isSubmitting.set(false);
-        console.log('[LoginComponent] Login success ->', response);
-
-        // Store { userId, name, email, role } in localStorage
         this.authService.storeSession(response);
+        this.toast.success(`Welcome back, ${response.name.split(' ')[0]}!`);
 
-        // Route based on role returned by the backend
         switch (response.role) {
-          case 'ADMIN':
-            this.router.navigate(['/admin/dashboard']);
-            break;
-          case 'VENDOR':
-            this.router.navigate(['/vendor/dashboard']);
-            break;
-          default:
-            this.router.navigate(['/dashboard']);
+          case 'ADMIN':  this.router.navigate(['/admin/dashboard']); break;
+          case 'VENDOR': this.router.navigate(['/vendor/dashboard']); break;
+          default:       this.router.navigate(['/dashboard']);
         }
       },
       error: (err: { status: number; message: string }) => {
-        console.error('[LoginComponent] Login error ->', err);
         this.isSubmitting.set(false);
         this.serverError.set(err.message);
-        console.log('[LoginComponent] serverError set to:', this.serverError());
+        this.toast.error(err.message || 'Sign in failed.');
       },
     });
   }

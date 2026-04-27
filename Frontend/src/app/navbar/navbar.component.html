@@ -1,8 +1,5 @@
-<!-- navbar.component.html -->
-
 <!-- ── Desktop Topbar ────────────────────────────────────────── -->
 <header class="topbar">
-  <!-- Left side intentionally empty — back button lives in each page's header -->
   <div class="topbar-left"></div>
 
   <div class="topbar-right">
@@ -10,10 +7,81 @@
 
     <div class="search-pill">
       <i class="bi bi-search"></i>
-      <input type="text" placeholder="Search stalls..." />
+      <input
+        type="text"
+        placeholder="Search menu items..."
+        [ngModel]="searchTerm"
+        (ngModelChange)="onSearchInput($event)" />
+      <button
+        *ngIf="searchTerm"
+        class="search-clear"
+        type="button"
+        (click)="clearSearch()"
+        aria-label="Clear search">
+        <i class="bi bi-x-circle-fill"></i>
+      </button>
     </div>
 
-    <i class="bi bi-bell topbar-icon"></i>
+    <!-- Theme toggle (sun ↔ moon) -->
+    <button class="theme-toggle" type="button"
+            [class.is-dark]="theme === 'dark'"
+            (click)="toggleTheme()"
+            [attr.aria-label]="theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'"
+            [title]="theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'">
+      <span class="theme-knob">
+        <i class="bi bi-sun-fill icon-sun"></i>
+        <i class="bi bi-moon-stars-fill icon-moon"></i>
+      </span>
+    </button>
+
+    <!-- Notification bell + dropdown -->
+    <div class="notif-wrap" [class.open]="notifOpen">
+      <button class="notif-btn" type="button"
+              (click)="toggleNotifications()"
+              [attr.aria-expanded]="notifOpen"
+              aria-label="Notifications">
+        <i class="bi bi-bell"></i>
+        <span class="notif-dot" *ngIf="unread > 0">{{ unread > 9 ? '9+' : unread }}</span>
+      </button>
+
+      <div class="notif-panel" *ngIf="notifOpen">
+        <header class="notif-head">
+          <div>
+            <h3>Notifications</h3>
+            <small *ngIf="unread > 0">{{ unread }} unread</small>
+            <small *ngIf="unread === 0">You're all caught up</small>
+          </div>
+          <button class="mark-read-btn"
+                  type="button"
+                  [disabled]="unread === 0 || marking"
+                  (click)="markAllRead()">
+            <i class="bi bi-check2-all"></i>
+            {{ marking ? 'Marking…' : 'Mark all as read' }}
+          </button>
+        </header>
+
+        <ul class="notif-list" *ngIf="topNotifications().length > 0">
+          <li *ngFor="let n of topNotifications()"
+              class="notif-item"
+              [class.unread]="!n.isRead">
+            <span class="notif-icon">
+              <i class="bi" [ngClass]="notifIcon(n.message)"></i>
+            </span>
+            <div class="notif-body">
+              <p class="notif-msg">{{ n.message }}</p>
+              <small class="notif-time">{{ formatRelative(n.timestamp) }}</small>
+            </div>
+            <span class="unread-pip" *ngIf="!n.isRead"></span>
+          </li>
+        </ul>
+
+        <div class="notif-empty" *ngIf="topNotifications().length === 0">
+          <i class="bi bi-bell-slash"></i>
+          <span>No notifications yet</span>
+        </div>
+      </div>
+    </div>
+
     <div class="avatar-circle">{{ user?.name | slice:0:2 | uppercase }}</div>
   </div>
 </header>
@@ -25,10 +93,61 @@
     <span class="logo-text">One Appetite</span>
   </div>
   <div class="mobile-nav-right">
-    <i class="bi bi-bell topbar-icon"></i>
+    <button class="theme-toggle mobile-theme-toggle" type="button"
+            [class.is-dark]="theme === 'dark'"
+            (click)="toggleTheme()"
+            [attr.aria-label]="theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'">
+      <span class="theme-knob">
+        <i class="bi bi-sun-fill icon-sun"></i>
+        <i class="bi bi-moon-stars-fill icon-moon"></i>
+      </span>
+    </button>
+
+    <button class="notif-btn mobile-notif" type="button"
+            (click)="toggleNotifications()"
+            aria-label="Notifications">
+      <i class="bi bi-bell"></i>
+      <span class="notif-dot" *ngIf="unread > 0">{{ unread > 9 ? '9+' : unread }}</span>
+    </button>
     <div class="avatar-circle">{{ user?.name | slice:0:2 | uppercase }}</div>
     <button class="hamburger" (click)="hamburgerClick()">
       <i class="bi bi-list"></i>
     </button>
+  </div>
+
+  <!-- Re-use the panel for mobile -->
+  <div class="notif-panel mobile-notif-panel" *ngIf="notifOpen">
+    <header class="notif-head">
+      <div>
+        <h3>Notifications</h3>
+        <small *ngIf="unread > 0">{{ unread }} unread</small>
+        <small *ngIf="unread === 0">You're all caught up</small>
+      </div>
+      <button class="mark-read-btn"
+              type="button"
+              [disabled]="unread === 0 || marking"
+              (click)="markAllRead()">
+        <i class="bi bi-check2-all"></i>
+        {{ marking ? 'Marking…' : 'Mark all as read' }}
+      </button>
+    </header>
+    <ul class="notif-list" *ngIf="topNotifications().length > 0">
+      <li *ngFor="let n of topNotifications()"
+          class="notif-item"
+          [class.unread]="!n.isRead">
+        <span class="notif-icon">
+          <i class="bi" [ngClass]="notifIcon(n.message)"></i>
+        </span>
+        <div class="notif-body">
+          <p class="notif-msg">{{ n.message }}</p>
+          <small class="notif-time">{{ formatRelative(n.timestamp) }}</small>
+        </div>
+        <span class="unread-pip" *ngIf="!n.isRead"></span>
+      </li>
+    </ul>
+    <div class="notif-empty" *ngIf="topNotifications().length === 0">
+      <i class="bi bi-bell-slash"></i>
+      <span>No notifications yet</span>
+    </div>
   </div>
 </div>

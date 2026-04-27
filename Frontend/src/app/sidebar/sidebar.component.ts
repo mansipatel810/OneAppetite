@@ -6,6 +6,7 @@ import { Subscription } from 'rxjs';
 import { AuthService, LoginResponse } from '../services/auth.service';
 import { LayoutService } from '../services/layout.service';
 import { CartService, CartState, CartItemDTO } from '../services/cart.service';
+import { LocationService, SavedLocation } from '../services/location.service';
 
 @Component({
   selector: 'app-sidebar',
@@ -20,10 +21,12 @@ export class SidebarComponent implements OnInit, OnDestroy {
   private cdr           = inject(ChangeDetectorRef);
   private layoutService = inject(LayoutService);
   private cartSvc       = inject(CartService);
+  private locationSvc   = inject(LocationService);
 
   user: LoginResponse | null = null;
   mobileMenuOpen = false;
   cartState!: CartState;
+  location: SavedLocation | null = null;
 
   private subs: Subscription[] = [];
 
@@ -62,6 +65,14 @@ export class SidebarComponent implements OnInit, OnDestroy {
       })
     );
 
+    // Subscribe to current location so the panel updates when user picks/changes one
+    this.subs.push(
+      this.locationSvc.location$.subscribe(loc => {
+        this.location = loc;
+        this.cdr.detectChanges();
+      })
+    );
+
     // Load cart from backend on init so it persists across page refreshes
     const userId = this.user?.userId;
     if (userId) {
@@ -86,5 +97,12 @@ export class SidebarComponent implements OnInit, OnDestroy {
   goToCart(): void {
     this.close();
     this.router.navigate(['/cart']);
+  }
+
+  /** Force the dashboard to re-show the City→Campus→Building selector. */
+  changeLocation(): void {
+    this.locationSvc.clear();
+    this.close();
+    this.router.navigate(['/dashboard'], { queryParams: { change: '1' } });
   }
 }

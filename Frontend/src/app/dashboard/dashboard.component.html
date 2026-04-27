@@ -1,20 +1,18 @@
-
-
 <div class="dashboard-page">
 
   <!-- Hero -->
   <div class="hero-block">
     <h1 class="hero-heading">
-      <ng-container *ngIf="vendors.length === 0; else vendorHeading">
+      <ng-container *ngIf="selectionMode; else vendorHeading">
         Find your <em>Flavor.</em>
       </ng-container>
       <ng-template #vendorHeading>
-        Select a <em>Vendor.</em>
+        Pick a <em>Vendor.</em>
       </ng-template>
     </h1>
 
     <p class="hero-sub">
-      {{ vendors.length === 0
+      {{ selectionMode
          ? 'Select your campus to view available vendors and curated menus for your location today.'
          : 'Explore the vendors available in your building.'
       }}
@@ -22,7 +20,7 @@
   </div>
 
   <!-- Location Selectors -->
-  <div class="location-selectors" *ngIf="vendors.length === 0">
+  <div class="location-selectors" *ngIf="selectionMode">
     <div class="selector-row">
       <div class="selector-group">
         <label>City</label>
@@ -57,7 +55,7 @@
   </div>
 
   <!-- Two-column layout: Buildings Panel -->
-  <div class="two-col-grid" *ngIf="buildings.length > 0 && vendors.length === 0">
+  <div class="two-col-grid" *ngIf="selectionMode && buildings.length > 0">
 
     <div class="buildings-panel">
       <div class="buildings-header">
@@ -106,28 +104,77 @@
   </div>
 
   <!-- Vendor Grid -->
-  <div class="vendor-grid" *ngIf="vendors.length > 0">
+  <div class="vendor-grid" *ngIf="!selectionMode">
     <div class="vendor-grid-header">
       <div class="vendor-grid-title-group">
-        <button class="back-btn-inline" (click)="resetVendors()" title="Change building">
-          <i class="bi bi-arrow-left"></i>
-        </button>
         <div>
-          <h2>{{ vendors.length }} Vendors Near You</h2>
+          <h2>{{ visibleVendors.length }} Vendor{{ visibleVendors.length === 1 ? '' : 's' }} Near You</h2>
           <span class="vendor-location-tag">
             <i class="bi bi-geo-alt-fill"></i> {{ currentBuilding }}
+            <button type="button" class="change-location-link" (click)="openSelector()">
+              <i class="bi bi-pencil-square"></i> Change Location
+            </button>
           </span>
+        </div>
+      </div>
+
+      <!-- Dietary toggle + search -->
+      <div class="vendor-filter-row">
+        <div class="diet-toggle">
+          <button type="button"
+                  class="diet-chip"
+                  [class.active]="dietaryFilter === 'ALL'"
+                  (click)="setDietaryFilter('ALL')">
+            <i class="bi bi-grid"></i> All
+          </button>
+          <button type="button"
+                  class="diet-chip diet-veg"
+                  [class.active]="dietaryFilter === 'VEG'"
+                  (click)="setDietaryFilter('VEG')">
+            <span class="diet-mark veg"><span></span></span> Veg
+          </button>
+          <button type="button"
+                  class="diet-chip diet-nonveg"
+                  [class.active]="dietaryFilter === 'NON_VEG'"
+                  (click)="setDietaryFilter('NON_VEG')">
+            <span class="diet-mark nonveg"><span></span></span> Non-Veg
+          </button>
+        </div>
+
+        <div class="vendor-search">
+          <i class="bi bi-search"></i>
+          <input type="text"
+                 placeholder="Search vendors…"
+                 [value]="vendorSearch"
+                 (input)="onVendorSearch($event)" />
         </div>
       </div>
     </div>
 
-    <div class="vendor-cards">
-      <div class="vendor-card" *ngFor="let v of vendors">
+    <!-- Loading skeleton when re-fetching for a saved location -->
+    <div class="loading-state" *ngIf="isSearching">
+      <div class="spinner-border" role="status"></div>
+      <p>Loading vendors near {{ currentBuilding || 'you' }}…</p>
+    </div>
+
+    <div class="vendor-cards" *ngIf="!isSearching && visibleVendors.length > 0">
+      <div class="vendor-card" *ngFor="let v of visibleVendors">
         <div class="vendor-img-wrap">
           <img *ngIf="v.vendorImageUrl" [src]="v.vendorImageUrl" [alt]="v.vendorName" />
           <div *ngIf="!v.vendorImageUrl" class="vendor-img-placeholder">
             <i class="bi bi-shop"></i>
           </div>
+          <span class="vendor-diet-badge"
+                *ngIf="v.vendorType"
+                [class.veg]="(v.vendorType || '').toUpperCase().includes('VEG') && !(v.vendorType || '').toUpperCase().includes('NON')"
+                [class.nonveg]="(v.vendorType || '').toUpperCase().includes('NON')">
+            <span class="diet-mark"
+                  [class.veg]="(v.vendorType || '').toUpperCase().includes('VEG') && !(v.vendorType || '').toUpperCase().includes('NON')"
+                  [class.nonveg]="(v.vendorType || '').toUpperCase().includes('NON')">
+              <span></span>
+            </span>
+            {{ (v.vendorType || '').toUpperCase().includes('NON') ? 'Non-Veg' : 'Veg' }}
+          </span>
         </div>
         <div class="vendor-card-body">
           <h3 class="vendor-name">{{ v.vendorName }}</h3>
@@ -138,23 +185,38 @@
         </div>
       </div>
     </div>
+
+    <div class="empty-state vendor-empty" *ngIf="!isSearching && visibleVendors.length === 0 && vendors.length > 0">
+      <i class="bi bi-funnel empty-icon"></i>
+      <h3>No vendors match your filters</h3>
+      <p>Try clearing the dietary filter or adjusting your search.</p>
+    </div>
+
+    <div class="empty-state vendor-empty" *ngIf="!isSearching && vendors.length === 0">
+      <i class="bi bi-shop empty-icon"></i>
+      <h3>No vendors live in this building yet</h3>
+      <p>Pick a different building to keep exploring.</p>
+      <button class="btn-primary-inline" (click)="openSelector()">
+        <i class="bi bi-geo-alt"></i> Change Location
+      </button>
+    </div>
   </div>
 
-  <!-- Empty State -->
-  <div class="empty-state" *ngIf="vendors.length === 0 && !isSearching && buildings.length === 0">
+  <!-- Empty State (initial) -->
+  <div class="empty-state" *ngIf="selectionMode && !isSearching && buildings.length === 0">
     <i class="bi bi-geo-alt empty-icon"></i>
     <h3>Where are you eating today?</h3>
     <p>Select your city, campus and building to discover food stalls near you.</p>
   </div>
 
   <!-- Footer -->
-  <footer class="app-footer">
+  <!-- <footer class="app-footer">
     <span>© 2026 One Appetite. Corporate Cafeteria Solutions.</span>
     <div class="footer-links">
       <a href="#">Support</a>
       <a href="#">Terms of Service</a>
       <a href="#">Privacy Policy</a>
     </div>
-  </footer>
+  </footer> -->
 
 </div>

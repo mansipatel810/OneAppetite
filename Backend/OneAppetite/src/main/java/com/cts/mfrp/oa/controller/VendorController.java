@@ -22,7 +22,10 @@ public class VendorController {
 
     @GetMapping("/building/{buildingId}")
     public List<VendorRegisterResponse> getVendorsByBuilding(@PathVariable Integer buildingId) {
-        return vendorService.getVendorsByBuilding(buildingId);
+        System.out.println("[VendorController] GET /vendors/building/" + buildingId);
+        List<VendorRegisterResponse> result = vendorService.getVendorsByBuilding(buildingId);
+        System.out.println("[VendorController] returning " + result.size() + " vendor(s) for buildingId=" + buildingId);
+        return result;
     }
 
     @PutMapping("/{vendorId}/image")

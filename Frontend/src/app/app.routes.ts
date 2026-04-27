@@ -7,22 +7,22 @@ import { ShellComponent }      from './shell/shell.component';
 import { MenuComponent }       from './menu/menu.component';
 import { CartViewComponent }   from './cart-view/cart-view.component';
 import { AdminUsersComponent } from './admin/admin-users/admin-users.component';
-import { adminGuard } from './guards/admin.guard';
+import { MyOrdersComponent }   from './my-orders/my-orders.component';
+import { SettingsComponent }   from './settings/settings.component';
+import { VendorMenuComponent } from './vendor-menu/vendor-menu.component';
+import { VendorSettingsComponent } from './vendor-settings/vendor-settings.component';
+import { AdminSettingsComponent }  from './admin-settings/admin-settings.component';
 
 export const routes: Routes = [
-  { path: 'admin/dashboard', component: AdminUsersComponent },
+  { path: 'admin/dashboard',  component: AdminUsersComponent },
+  { path: 'admin/settings',   component: AdminSettingsComponent },
   { path: 'vendor/dashboard', component: VendorKanbanComponent },
+  { path: 'vendor/menu',      component: VendorMenuComponent },
+  { path: 'vendor/settings',  component: VendorSettingsComponent },
 
   // ── Public (no sidebar/navbar) ────────────────────────────────
   { path: 'login',    component: LoginComponent },
   { path: 'register', component: RegisterComponent },
-
-  // Admin-only user management screen (US-01 + US-02)
-  // {
-  //   path: 'admin/users',
-  //   component: AdminUsersComponent,
-  //   canActivate: [adminGuard],
-  // },
 
   // Default redirect: root → login
   { path: '', redirectTo: 'login', pathMatch: 'full' },
@@ -35,6 +35,8 @@ export const routes: Routes = [
       { path: 'dashboard',        component: DashboardComponent },
       { path: 'vendor/:vendorId', component: MenuComponent },
       { path: 'cart',             component: CartViewComponent },
+      { path: 'my-orders',        component: MyOrdersComponent },
+      { path: 'settings',         component: SettingsComponent },
     ]
   },
 

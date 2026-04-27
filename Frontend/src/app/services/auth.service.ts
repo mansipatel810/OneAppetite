@@ -43,6 +43,19 @@ export interface RegisterResponse {
   [key: string]: any;
 }
 
+export interface ForgotPasswordPayload {
+  phone: string;
+}
+export interface VerifyOtpPayload {
+  phone: string;
+  otp: string;
+}
+export interface ResetPasswordPayload {
+  phone: string;
+  otp: string;
+  newPassword: string;
+}
+
 /* ──────────────────────────── Service ─────────────────────────── */
 
 @Injectable({
@@ -88,6 +101,29 @@ export class AuthService {
 
     return this.http.post<LoginResponse>(url, credentials).pipe(
       tap((res) => console.log('[AuthService] login success →', res)),
+      catchError((err) => AuthService.handleError(err, url))
+    );
+  }
+
+  /* ── Password reset (OTP) ── */
+
+  forgotPassword(payload: ForgotPasswordPayload): Observable<{ message: string; expiresInMinutes?: string }> {
+    const url = `${this.API_BASE}/forgot-password`;
+    return this.http.post<{ message: string; expiresInMinutes?: string }>(url, payload).pipe(
+      catchError((err) => AuthService.handleError(err, url))
+    );
+  }
+
+  verifyOtp(payload: VerifyOtpPayload): Observable<{ valid: boolean }> {
+    const url = `${this.API_BASE}/verify-otp`;
+    return this.http.post<{ valid: boolean }>(url, payload).pipe(
+      catchError((err) => AuthService.handleError(err, url))
+    );
+  }
+
+  resetPassword(payload: ResetPasswordPayload): Observable<{ message: string }> {
+    const url = `${this.API_BASE}/reset-password`;
+    return this.http.post<{ message: string }>(url, payload).pipe(
       catchError((err) => AuthService.handleError(err, url))
     );
   }

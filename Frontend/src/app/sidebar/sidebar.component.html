@@ -10,6 +10,28 @@
     <span class="logo-text">One Appetite</span>
   </div>
 
+  <!-- ── Current Location Panel ──────────────────────────────── -->
+  <div class="location-panel" *ngIf="location">
+    <div class="location-head">
+      <span class="location-label">Current Location</span>
+      <button type="button" class="location-change" (click)="changeLocation()" title="Change location">
+        <i class="bi bi-pencil-square"></i>
+      </button>
+    </div>
+    <div class="location-body">
+      <i class="bi bi-geo-alt-fill"></i>
+      <div class="location-text">
+        <strong>{{ location.buildingName }}</strong>
+        <small>{{ location.campusName }} · {{ location.cityName }}</small>
+      </div>
+    </div>
+  </div>
+
+  <button class="location-cta" *ngIf="!location" (click)="changeLocation()">
+    <i class="bi bi-geo-alt"></i>
+    <span>Set your location</span>
+  </button>
+
   <!-- ── Navigation ───────────────────────────────────────────── -->
   <nav class="sidebar-nav">
     <p class="nav-section-label">Navigation</p>
@@ -23,6 +45,9 @@
     <a class="nav-item" routerLink="/settings" routerLinkActive="active" (click)="close()">
       <i class="bi bi-gear"></i> Settings
     </a>
+    <button type="button" class="nav-item nav-item-button" (click)="changeLocation()">
+      <i class="bi bi-geo-alt"></i> Change Location
+    </button>
   </nav>
 
   <!-- ── Cart Summary (persistent, always visible) ────────────── -->

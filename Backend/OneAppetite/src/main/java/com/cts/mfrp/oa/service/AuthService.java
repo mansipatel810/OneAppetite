@@ -1,8 +1,11 @@
 package com.cts.mfrp.oa.service;
 
+import com.cts.mfrp.oa.dto.request.ForgotPasswordRequest;
 import com.cts.mfrp.oa.dto.request.LoginRequest;
 import com.cts.mfrp.oa.dto.request.RegisterRequest;
+import com.cts.mfrp.oa.dto.request.ResetPasswordRequest;
 import com.cts.mfrp.oa.dto.request.VendorRegisterRequest;
+import com.cts.mfrp.oa.dto.request.VerifyOtpRequest;
 import com.cts.mfrp.oa.dto.response.LoginResponse;
 import com.cts.mfrp.oa.dto.response.UserResponse;
 import com.cts.mfrp.oa.dto.response.VendorRegisterResponse;
@@ -18,7 +21,11 @@ import com.cts.mfrp.oa.repository.UserRepository;
 import org.mindrot.jbcrypt.BCrypt;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.security.SecureRandom;
+import java.time.LocalDateTime;
+import java.util.Map;
 import java.util.Set;
 
 @Service
@@ -118,6 +125,81 @@ public class AuthService {
                 saved.getVendorImageUrl(),
                 saved.getVendorType()
         );
+    }
+
+    /* ───────────────────────────────────────────────────────────
+       Password reset (OTP) flow
+       1) requestPasswordReset → 6-digit OTP, 10-minute window, "sent" via console
+       2) verifyOtp            → confirms OTP without consuming it (UI gate)
+       3) resetPassword        → re-validates OTP, BCrypt-hashes the new password
+                                 and clears the OTP fields
+    ─────────────────────────────────────────────────────────── */
+
+    private static final int OTP_TTL_MINUTES = 10;
+    private static final SecureRandom OTP_RNG = new SecureRandom();
+
+    @Transactional
+    public Map<String, String> requestPasswordReset(ForgotPasswordRequest request) {
+        User user = userRepository.findByPhone(request.phone())
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "No account found for phone " + request.phone()));
+
+        String otp = String.format("%06d", OTP_RNG.nextInt(1_000_000));
+        user.setResetOtp(otp);
+        user.setResetOtpExpiry(LocalDateTime.now().plusMinutes(OTP_TTL_MINUTES));
+        userRepository.save(user);
+
+        // ── Simulated SMS delivery ──
+        // In production this would hand off to a real SMS provider (Twilio etc).
+        System.out.println("====================================================");
+        System.out.println("[OneAppetite] Password reset OTP for " + user.getName());
+        System.out.println("    phone: " + user.getPhone());
+        System.out.println("    OTP  : " + otp);
+        System.out.println("    valid for " + OTP_TTL_MINUTES + " minutes");
+        System.out.println("====================================================");
+
+        return Map.of(
+                "message", "OTP sent to your registered number",
+                "expiresInMinutes", String.valueOf(OTP_TTL_MINUTES)
+        );
+    }
+
+    public Map<String, Boolean> verifyOtp(VerifyOtpRequest request) {
+        User user = userRepository.findByPhone(request.phone())
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "No account found for phone " + request.phone()));
+
+        boolean valid = isOtpValid(user, request.otp());
+        if (!valid) {
+            throw new InvalidCredentialsException("Invalid or expired OTP. Please request a new one.");
+        }
+        return Map.of("valid", true);
+    }
+
+    @Transactional
+    public Map<String, String> resetPassword(ResetPasswordRequest request) {
+        User user = userRepository.findByPhone(request.phone())
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "No account found for phone " + request.phone()));
+
+        if (!isOtpValid(user, request.otp())) {
+            throw new InvalidCredentialsException("Invalid or expired OTP. Please request a new one.");
+        }
+
+        // Hash via the same BCrypt utility used at registration
+        user.setPassword(BCrypt.hashpw(request.newPassword(), BCrypt.gensalt()));
+        // Burn the OTP so it can't be reused
+        user.setResetOtp(null);
+        user.setResetOtpExpiry(null);
+        userRepository.save(user);
+
+        return Map.of("message", "Password reset successfully");
+    }
+
+    private boolean isOtpValid(User user, String submitted) {
+        if (user.getResetOtp() == null || user.getResetOtpExpiry() == null) return false;
+        if (!user.getResetOtp().equals(submitted)) return false;
+        return user.getResetOtpExpiry().isAfter(LocalDateTime.now());
     }
 
     public LoginResponse login(LoginRequest request) {

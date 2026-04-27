@@ -12,9 +12,11 @@ import { NavbarComponent }  from '../navbar/navbar.component';
       <app-sidebar></app-sidebar>
       <div class="main-content">
         <app-navbar></app-navbar>
-        <div class="page-container">
-          <router-outlet></router-outlet>
-        </div>
+        <main class="page-container">
+          <div class="page-inner">
+            <router-outlet></router-outlet>
+          </div>
+        </main>
       </div>
     </div>
   `,
@@ -24,7 +26,7 @@ import { NavbarComponent }  from '../navbar/navbar.component';
       height: 100vh;
       height: 100dvh;
       overflow: hidden;
-      background: #f5f5f4;
+      background: var(--oa-bg);
     }
     .main-content {
       flex: 1;
@@ -38,9 +40,27 @@ import { NavbarComponent }  from '../navbar/navbar.component';
       overflow-y: auto;
       overflow-x: hidden;
       -webkit-overflow-scrolling: touch;
+      /* Page-level breathing room — generous gutter from sidebar / navbar */
+      padding: var(--oa-page-pad-y) var(--oa-page-pad-x) calc(var(--oa-page-pad-y) + 16px);
+    }
+    .page-inner {
+      max-width: var(--oa-page-max);
+      margin: 0 auto;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: var(--oa-section-gap);
+    }
+    @media (max-width: 1024px) {
+      .page-container {
+        padding: var(--oa-page-pad-y) var(--oa-page-pad-x-tablet);
+      }
     }
     @media (max-width: 768px) {
-      .main-content { padding-top: 56px; }
+      .main-content { padding-top: 0; }
+      .page-container {
+        padding: var(--oa-page-pad-y-mobile) var(--oa-page-pad-x-mobile);
+      }
     }
   `]
 })

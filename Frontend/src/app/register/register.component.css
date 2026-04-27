@@ -1,0 +1,67 @@
+/* Register reuses the auth-shell defined in login.component.css for the
+   shell, hero, form-panel, and field primitives. Imported via the global
+   styles + same class names. Only the register-specific additions live here. */
+
+@import '../login/login.component.css';
+
+/* ── Side-by-side fields (email + phone on wide screens) ─── */
+.field-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+@media (max-width: 540px) {
+  .field-row { grid-template-columns: 1fr; }
+}
+
+/* ── Vendor-only collapsible block ──────────────────────── */
+.vendor-section {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px;
+  background: var(--oa-primary-50);
+  border: 1px dashed var(--oa-primary-200);
+  border-radius: var(--oa-radius-lg);
+  animation: section-slide var(--oa-dur-med) var(--oa-ease-bounce);
+}
+
+.vendor-section-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--oa-primary-700);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--oa-primary-200);
+}
+.vendor-section-head i { font-size: 18px; }
+
+@keyframes section-slide {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Textarea wrapper ───────────────────────────────────── */
+.auth-input-wrap.textarea-wrap {
+  align-items: flex-start;
+  padding: 10px 14px;
+}
+.auth-input-wrap.textarea-wrap textarea {
+  flex: 1;
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--oa-text);
+  resize: vertical;
+  min-height: 70px;
+  line-height: 1.5;
+}
+.auth-input-wrap.textarea-wrap textarea::placeholder {
+  color: var(--oa-slate-400);
+}

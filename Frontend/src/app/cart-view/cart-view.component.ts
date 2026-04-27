@@ -7,6 +7,7 @@ import { Router, RouterLink } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { AuthService } from '../services/auth.service';
 import { CartService, CartState, CartItemDTO, WalletResponse } from '../services/cart.service';
+import { ToastService } from '../services/toast.service';
 
 @Component({
   selector: 'app-cart-view',
@@ -19,6 +20,7 @@ export class CartViewComponent implements OnInit, OnDestroy {
   private authSvc  = inject(AuthService);
   private cartSvc  = inject(CartService);
   private router   = inject(Router);
+  private toast    = inject(ToastService);
   private cdr      = inject(ChangeDetectorRef);
 
   userId!: number;
@@ -129,10 +131,8 @@ export class CartViewComponent implements OnInit, OnDestroy {
           this.orderSuccess    = true;
           this.confirmedToken  = res.tokenNumber ?? this.cartState?.tokenNumber ?? '';
           this.cartSvc.clearCart();
-
-          // refresh wallet balance after debit
           this.loadWalletBalance();
-
+          this.toast.success(`Order placed — token ${this.confirmedToken}`);
           this.cdr.detectChanges();
         },
         error: (err) => {
@@ -143,6 +143,7 @@ export class CartViewComponent implements OnInit, OnDestroy {
           } else {
             this.orderError = 'Payment failed. Please try again.';
           }
+          this.toast.error(this.orderError);
           this.cdr.detectChanges();
         }
       });

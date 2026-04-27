@@ -7,17 +7,19 @@ import {
   computed,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router, RouterLink } from '@angular/router';
+import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService, LoginResponse } from '../../services/auth.service';
 import {
   AdminService,
   UserResponse,
 } from '../../services/admin.service';
+import { ToastService } from '../../services/toast.service';
+import { ThemeService, Theme } from '../../services/theme.service';
 
 @Component({
   selector: 'app-admin-users',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, RouterLinkActive],
   templateUrl: './admin-users.component.html',
   styleUrls: ['./admin-users.component.css'],
 })
@@ -25,6 +27,10 @@ export class AdminUsersComponent implements OnInit {
   private authService = inject(AuthService);
   private adminService = inject(AdminService);
   private router = inject(Router);
+  private toast = inject(ToastService);
+  private themeSvc = inject(ThemeService);
+
+  theme: Theme = 'light';
 
   user: LoginResponse | null = null;
 
@@ -93,7 +99,16 @@ export class AdminUsersComponent implements OnInit {
     });
   }
 
-  ngOnInit(): void {}
+  ngOnInit(): void {
+    this.themeSvc.theme$.subscribe(t => { this.theme = t; });
+  }
+
+  toggleTheme(): void {
+    this.themeSvc.toggle();
+    this.toast.success(this.themeSvc.current === 'dark'
+      ? 'Theme updated to Dark Mode'
+      : 'Theme updated to Light Mode');
+  }
 
   loadUsers(): void {
     this.loading.set(true);
@@ -123,11 +138,10 @@ export class AdminUsersComponent implements OnInit {
   /** Flip a user's active flag. Blocks self-toggle to prevent lockout. */
   toggle(u: UserResponse): void {
     if (this.user && u.userId === this.user.userId) {
-      return; // can't toggle yourself
+      this.toast.warning("You can't deactivate your own admin account.");
+      return;
     }
-    if (this.togglingId() === u.userId) {
-      return; // already in-flight
-    }
+    if (this.togglingId() === u.userId) return;
 
     this.togglingId.set(u.userId);
 
@@ -137,10 +151,16 @@ export class AdminUsersComponent implements OnInit {
           arr.map((x) => (x.userId === updated.userId ? updated : x))
         );
         this.togglingId.set(null);
+        this.toast.success(
+          updated.isActive
+            ? `${updated.name} reactivated`
+            : `${updated.name} deactivated`
+        );
       },
       error: (e) => {
         this.error.set(e?.message ?? 'Failed to update user status.');
         this.togglingId.set(null);
+        this.toast.error(e?.message || 'Failed to update user status.');
       },
     });
   }

@@ -1,216 +1,321 @@
-<div class="app-shell">
+<div class="vendor-menu-shell">
 
-  <!-- ─── Mobile Top Nav ───────────────────────────────────────── -->
-  <header class="mobile-nav">
-    <div class="mobile-nav-logo">
-      <div class="logo-mark"><i class="bi bi-geo-fill"></i></div>
-      <span class="logo-text">One Appetite</span>
+  <!-- ── Top Nav (matches kanban) ─────────────────────────────── -->
+  <header class="vendor-topbar">
+    <div class="brand">
+      <i class="bi bi-cup-straw"></i>
+      <span>One Appetite — Vendor</span>
     </div>
-    <div class="mobile-nav-right">
-      <i class="bi bi-bell topbar-icon"></i>
-      <div class="avatar-circle">{{ initials(user?.name ?? '') }}</div>
-      <button class="hamburger" (click)="toggleMobileMenu()">
-        <i class="bi" [ngClass]="mobileMenuOpen ? 'bi-x-lg' : 'bi-list'"></i>
+    <nav class="vendor-tabs">
+      <a class="tab" routerLink="/vendor/dashboard">
+        <i class="bi bi-kanban"></i> Kanban
+      </a>
+      <a class="tab active">
+        <i class="bi bi-menu-button-wide-fill"></i> Menu
+      </a>
+      <a class="tab" routerLink="/vendor/settings">
+        <i class="bi bi-gear-fill"></i> Settings
+      </a>
+    </nav>
+    <div class="vendor-meta">
+      <span class="vendor-name">{{ user?.name }}</span>
+      <button class="theme-pill" type="button"
+              [class.is-dark]="theme === 'dark'"
+              (click)="toggleTheme()"
+              [attr.aria-label]="theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'"
+              [title]="theme === 'dark' ? 'Light mode' : 'Dark mode'">
+        <i class="bi bi-sun-fill" *ngIf="theme === 'light'"></i>
+        <i class="bi bi-moon-stars-fill" *ngIf="theme === 'dark'"></i>
+      </button>
+      <button class="btn-ghost" (click)="logout()">
+        <i class="bi bi-box-arrow-right"></i> Logout
       </button>
     </div>
   </header>
 
-  <!-- ─── Mobile Overlay ───────────────────────────────────────── -->
-  <div class="mobile-overlay" [class.open]="mobileMenuOpen" (click)="toggleMobileMenu()"></div>
+  <main class="vendor-menu-main">
 
-  <!-- ─── Sidebar ──────────────────────────────────────────────── -->
-  <aside class="sidebar" [class.mobile-open]="mobileMenuOpen">
-    <div class="sidebar-logo">
-      <div class="logo-mark"><i class="bi bi-geo-fill"></i></div>
-      <span class="logo-text">One Appetite</span>
-    </div>
+    <!-- ── Hero / Header ─────────────────────────────────────── -->
+    <section class="vendor-hero-row">
+      <div class="vendor-hero-text">
+        <h1>{{ vendorName() }}</h1>
+        <p class="subtitle" *ngIf="vendorDescription()">{{ vendorDescription() }}</p>
+        <div class="hero-meta">
+          <span class="meta-pill" *ngIf="vendorType()">
+            <i class="bi bi-tag-fill"></i> {{ vendorType() }}
+          </span>
+          <span class="meta-pill">
+            <i class="bi bi-list-ul"></i>
+            {{ items().length }} item{{ items().length === 1 ? '' : 's' }}
+          </span>
+        </div>
+      </div>
+      <button class="btn-primary" (click)="openCreateModal()">
+        <i class="bi bi-plus-lg"></i> Add Menu Item
+      </button>
+    </section>
 
-    <nav class="sidebar-nav">
-      <p class="nav-section-label">Navigation</p>
-      <a class="nav-item" routerLink="/dashboard" (click)="closeMobileMenu()">
-        <i class="bi bi-grid-fill"></i> Dashboard
-      </a>
-      <a class="nav-item active">
-        <i class="bi bi-menu-button-wide-fill"></i> Vendor Menu
-      </a>
-
-      <ng-container *ngIf="user?.role === 'ADMIN'">
-        <p class="nav-section-label" style="margin-top: 18px;">Admin</p>
-        <a class="nav-item" routerLink="/admin/users" (click)="closeMobileMenu()">
-          <i class="bi bi-people-fill"></i> Manage Users
-        </a>
-      </ng-container>
-    </nav>
-
-    <div class="sidebar-footer">
-      <button class="nav-item logout-btn" (click)="logout()">
-        <i class="bi bi-box-arrow-right"></i> Logout
+    <!-- ── Error banner ──────────────────────────────────────── -->
+    <div class="error-banner" *ngIf="error()">
+      <i class="bi bi-exclamation-triangle-fill"></i>
+      <span>{{ error() }}</span>
+      <button class="dismiss-btn" (click)="dismissError()" aria-label="Dismiss">
+        <i class="bi bi-x-lg"></i>
       </button>
     </div>
-  </aside>
 
-  <!-- ─── Main ─────────────────────────────────────────────────── -->
-  <div class="main-area">
+    <!-- ── Loading ───────────────────────────────────────────── -->
+    <div class="loading-state" *ngIf="loading()">
+      <div class="spinner"></div>
+      <p>Loading menu…</p>
+    </div>
 
-    <!-- Desktop Top Bar -->
-    <header class="topbar">
-      <div class="breadcrumb">
-        <button class="back-btn-crumb" (click)="back()" title="Back to dashboard">
-          <i class="bi bi-arrow-left"></i>
+    <ng-container *ngIf="!loading()">
+
+      <!-- ── Course filter ──────────────────────────────────── -->
+      <div class="course-tabs" *ngIf="items().length > 0">
+        <button class="course-tab" [class.active]="courseFilter() === 'ALL'"
+                (click)="setCourse('ALL')">
+          <i class="bi bi-collection"></i> All
         </button>
-        <span class="bc-step">Dashboard</span>
-        <i class="bi bi-chevron-right bc-sep"></i>
-        <span class="bc-active">{{ vendorName() }}</span>
-      </div>
-
-      <div class="topbar-right">
-        <span class="role-pill" *ngIf="user">{{ user.role }}</span>
-        <i class="bi bi-bell topbar-icon"></i>
-        <div class="avatar-circle">{{ initials(user?.name ?? '') }}</div>
-      </div>
-    </header>
-
-    <!-- Content -->
-    <main class="content-area">
-
-      <!-- Error banner -->
-      <div class="error-banner" *ngIf="error()">
-        <i class="bi bi-exclamation-triangle-fill"></i>
-        <span>{{ error() }}</span>
-        <button class="dismiss-btn" (click)="dismissError()" aria-label="Dismiss">
-          <i class="bi bi-x-lg"></i>
+        <button class="course-tab" [class.active]="courseFilter() === 'Breakfast'"
+                (click)="setCourse('Breakfast')">
+          <i class="bi bi-sunrise"></i> Breakfast
+        </button>
+        <button class="course-tab" [class.active]="courseFilter() === 'Lunch'"
+                (click)="setCourse('Lunch')">
+          <i class="bi bi-sun"></i> Lunch
+        </button>
+        <button class="course-tab" [class.active]="courseFilter() === 'Dinner'"
+                (click)="setCourse('Dinner')">
+          <i class="bi bi-moon-stars"></i> Dinner
         </button>
       </div>
 
-      <!-- Loading state -->
-      <div class="loading-state" *ngIf="loading()">
-        <div class="spinner-border" role="status"></div>
-        <p>Loading menu…</p>
+      <!-- ── Empty state ─────────────────────────────────────── -->
+      <div class="empty-state" *ngIf="items().length === 0">
+        <i class="bi bi-inbox empty-icon"></i>
+        <h3>No menu items yet</h3>
+        <p>Click "Add Menu Item" to publish your first dish.</p>
+        <button class="btn-primary" (click)="openCreateModal()">
+          <i class="bi bi-plus-lg"></i> Add your first item
+        </button>
       </div>
 
-      <!-- Vendor header + content -->
-      <ng-container *ngIf="!loading()">
+      <!-- ── Groups ──────────────────────────────────────────── -->
+      <ng-container *ngIf="items().length > 0">
+        <section class="course-group" *ngFor="let g of groupedItems()">
+          <header class="course-header">
+            <h2>{{ g.course }}</h2>
+            <span class="count-pill">{{ g.items.length }}</span>
+          </header>
 
-        <!-- Hero -->
-        <div class="vendor-hero">
-          <div class="vendor-hero-main">
-            <div class="vendor-avatar">
-              <i class="bi bi-shop"></i>
-            </div>
-            <div class="vendor-hero-text">
-              <h1>{{ vendorName() }}</h1>
-              <p *ngIf="vendorDescription()">{{ vendorDescription() }}</p>
-              <div class="vendor-hero-meta">
-                <span class="meta-pill" *ngIf="vendorType()">
-                  <i class="bi bi-tag-fill"></i> {{ vendorType() }}
-                </span>
-                <span class="meta-pill">
-                  <i class="bi bi-list-ul"></i>
-                  {{ items().length }} item{{ items().length === 1 ? '' : 's' }}
+          <div class="menu-grid">
+            <article class="menu-card" *ngFor="let it of g.items" [class.oos]="!it.isInStock">
+
+              <div class="menu-card-img">
+                <img *ngIf="it.imageUrl" [src]="it.imageUrl" [alt]="it.itemName" />
+                <div *ngIf="!it.imageUrl" class="menu-img-placeholder">
+                  <i class="bi bi-egg-fried"></i>
+                </div>
+                <span [ngClass]="dietaryClass(it.dietaryType)">
+                  <i class="bi bi-circle-fill"></i> {{ it.dietaryType }}
                 </span>
               </div>
-            </div>
-          </div>
-        </div>
 
-        <!-- Course filter -->
-        <div class="course-tabs" *ngIf="items().length > 0">
-          <button
-            class="course-tab"
-            [class.active]="courseFilter() === 'ALL'"
-            (click)="setCourse('ALL')"
-          ><i class="bi bi-collection"></i> All</button>
-          <button
-            class="course-tab"
-            [class.active]="courseFilter() === 'Breakfast'"
-            (click)="setCourse('Breakfast')"
-          ><i class="bi bi-sunrise"></i> Breakfast</button>
-          <button
-            class="course-tab"
-            [class.active]="courseFilter() === 'Lunch'"
-            (click)="setCourse('Lunch')"
-          ><i class="bi bi-sun"></i> Lunch</button>
-          <button
-            class="course-tab"
-            [class.active]="courseFilter() === 'Dinner'"
-            (click)="setCourse('Dinner')"
-          ><i class="bi bi-moon-stars"></i> Dinner</button>
-        </div>
-
-        <!-- Groups -->
-        <ng-container *ngIf="items().length > 0; else emptyTpl">
-          <section class="course-group" *ngFor="let g of groupedItems()">
-            <header class="course-header">
-              <h2>{{ g.course }}</h2>
-              <span class="count-pill">{{ g.items.length }}</span>
-            </header>
-
-            <div class="menu-grid">
-              <article class="menu-card" *ngFor="let it of g.items" [class.oos]="!it.isInStock">
-                <div class="menu-card-img">
-                  <img *ngIf="it.imageUrl" [src]="it.imageUrl" [alt]="it.itemName" />
-                  <div *ngIf="!it.imageUrl" class="menu-img-placeholder">
-                    <i class="bi bi-egg-fried"></i>
-                  </div>
-                  <span [ngClass]="dietaryClass(it.dietaryType)">
-                    <i class="bi bi-circle-fill"></i> {{ it.dietaryType }}
-                  </span>
-                </div>
-
-                <div class="menu-card-body">
+              <div class="menu-card-body">
+                <div class="menu-card-row">
                   <h3 class="menu-item-name">{{ it.itemName }}</h3>
-                  <p class="menu-item-meta">
-                    <span>{{ it.category }}</span>
-                    <span class="sep">·</span>
-                    <span>{{ it.mealCourse }}</span>
-                  </p>
-
-                  <div class="menu-card-footer">
-                    <div class="price">{{ it.price | currency:'INR':'symbol':'1.2-2' }}</div>
-                    <span
-                      class="stock-pill"
-                      [class.in-stock]="it.isInStock"
-                      [class.out-of-stock]="!it.isInStock"
-                    >
-                      <span class="status-dot"></span>
-                      {{ it.isInStock ? 'In stock' : 'Out of stock' }}
-                    </span>
-                  </div>
-
-                  <div class="qty-note" *ngIf="it.isInStock && it.quantityAvailable > 0">
-                    <i class="bi bi-box-seam"></i>
-                    {{ it.quantityAvailable }} available
+                  <div class="card-actions">
+                    <button class="icon-btn edit" (click)="openEditModal(it)" title="Edit">
+                      <i class="bi bi-pencil-square"></i>
+                    </button>
+                    <button class="icon-btn delete" (click)="openDeleteModal(it)" title="Delete">
+                      <i class="bi bi-trash"></i>
+                    </button>
                   </div>
                 </div>
-              </article>
-            </div>
-          </section>
 
-          <div class="empty-sub" *ngIf="groupedItems().length === 0">
-            <i class="bi bi-funnel"></i>
-            <span>No items in this course.</span>
-          </div>
-        </ng-container>
+                <p class="menu-item-meta">
+                  <span>{{ it.category }}</span>
+                  <span class="sep">·</span>
+                  <span>{{ it.mealCourse }}</span>
+                </p>
 
-        <ng-template #emptyTpl>
-          <div class="empty-state">
-            <i class="bi bi-inbox empty-icon"></i>
-            <h3>No menu items yet</h3>
-            <p>This vendor hasn't published any items. Check back soon.</p>
+                <div class="menu-card-footer">
+                  <div class="price">{{ it.price | currency:'INR':'symbol':'1.2-2' }}</div>
+
+                  <!-- Stock toggle switch -->
+                  <label class="stock-toggle"
+                         [class.on]="it.isInStock"
+                         [class.busy]="isToggling(it.itemId)">
+                    <input
+                      type="checkbox"
+                      [checked]="it.isInStock"
+                      [disabled]="isToggling(it.itemId)"
+                      (change)="toggleStock(it)" />
+                    <span class="track"><span class="knob"></span></span>
+                    <span class="label-text">{{ it.isInStock ? 'In Stock' : 'Out of Stock' }}</span>
+                  </label>
+                </div>
+
+                <div class="qty-note" *ngIf="it.quantityAvailable > 0">
+                  <i class="bi bi-box-seam"></i>
+                  {{ it.quantityAvailable }} available
+                </div>
+              </div>
+            </article>
           </div>
-        </ng-template>
+        </section>
       </ng-container>
+    </ng-container>
+  </main>
 
-    </main>
+  <!-- ─────────────────────────────────────────────────────────── -->
+  <!-- ── Add / Edit Modal ──────────────────────────────────── -->
+  <!-- ─────────────────────────────────────────────────────────── -->
+  <div class="modal-backdrop" *ngIf="showFormModal()" (click)="closeFormModal()">
+    <div class="modal-card" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+      <header class="modal-head">
+        <h2>
+          <i class="bi" [class.bi-plus-circle]="formMode() === 'create'"
+             [class.bi-pencil-square]="formMode() === 'edit'"></i>
+          {{ formMode() === 'create' ? 'Add Menu Item' : 'Edit Menu Item' }}
+        </h2>
+        <button class="icon-btn" (click)="closeFormModal()" aria-label="Close">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </header>
 
-    <!-- Footer -->
-    <footer class="app-footer">
-      <span>© 2026 One Appetite. Corporate Cafeteria Solutions.</span>
-      <div class="footer-links">
-        <a href="#">Support</a>
-        <a href="#">Terms of Service</a>
-        <a href="#">Privacy Policy</a>
-      </div>
-    </footer>
+      <form #f="ngForm" class="modal-body" (ngSubmit)="submitForm(f)">
+        <div class="form-grid">
+          <label class="field span-2">
+            <span>Item name</span>
+            <input
+              type="text"
+              name="itemName"
+              [(ngModel)]="form.itemName"
+              required
+              minlength="1"
+              maxlength="100"
+              placeholder="e.g. Veg Biryani" />
+          </label>
+
+          <label class="field">
+            <span>Category</span>
+            <input
+              type="text"
+              name="category"
+              [(ngModel)]="form.category"
+              required
+              maxlength="50"
+              placeholder="e.g. Main Course" />
+          </label>
+
+          <label class="field">
+            <span>Meal course</span>
+            <select name="mealCourse" [(ngModel)]="form.mealCourse" required>
+              <option *ngFor="let c of mealCourseOptions" [value]="c">{{ c }}</option>
+            </select>
+          </label>
+
+          <label class="field">
+            <span>Diet</span>
+            <select name="dietaryType" [(ngModel)]="form.dietaryType" required>
+              <option value="VEG">Vegetarian</option>
+              <option value="NON_VEG">Non-Vegetarian</option>
+            </select>
+          </label>
+
+          <label class="field">
+            <span>Price (₹)</span>
+            <input
+              type="number"
+              name="price"
+              [(ngModel)]="form.price"
+              required
+              min="0"
+              step="0.01"
+              placeholder="0.00" />
+          </label>
+
+          <label class="field">
+            <span>Quantity available</span>
+            <input
+              type="number"
+              name="quantityAvailable"
+              [(ngModel)]="form.quantityAvailable"
+              required
+              min="0"
+              step="1"
+              placeholder="0" />
+          </label>
+
+          <label class="field">
+            <span>Prep time (min)</span>
+            <input
+              type="number"
+              name="minPrepTime"
+              [(ngModel)]="form.minPrepTime"
+              min="0"
+              step="1"
+              placeholder="optional" />
+          </label>
+
+          <label class="field span-2">
+            <span>Image URL <small class="muted">(optional)</small></span>
+            <input
+              type="url"
+              name="imageUrl"
+              [(ngModel)]="form.imageUrl"
+              maxlength="255"
+              placeholder="https://…" />
+          </label>
+        </div>
+
+        <footer class="modal-foot">
+          <button type="button" class="btn-secondary" (click)="closeFormModal()" [disabled]="saving()">
+            Cancel
+          </button>
+          <button type="submit" class="btn-primary" [disabled]="saving() || f.invalid">
+            <i class="bi bi-check2-circle"></i>
+            {{ saving()
+                ? 'Saving…'
+                : (formMode() === 'create' ? 'Add Item' : 'Save Changes') }}
+          </button>
+        </footer>
+      </form>
+    </div>
   </div>
+
+  <!-- ─────────────────────────────────────────────────────────── -->
+  <!-- ── Delete Confirm Modal ─────────────────────────────── -->
+  <!-- ─────────────────────────────────────────────────────────── -->
+  <div class="modal-backdrop" *ngIf="showDeleteModal()" (click)="closeDeleteModal()">
+    <div class="modal-card modal-sm" (click)="$event.stopPropagation()" role="alertdialog" aria-modal="true">
+      <header class="modal-head danger">
+        <h2><i class="bi bi-exclamation-triangle-fill"></i> Remove menu item?</h2>
+        <button class="icon-btn" (click)="closeDeleteModal()" aria-label="Close">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </header>
+      <div class="modal-body">
+        <p class="confirm-text">
+          This will permanently remove
+          <strong>{{ deletingItem()?.itemName }}</strong>
+          from your menu. Customers won't be able to order it anymore.
+        </p>
+      </div>
+      <footer class="modal-foot">
+        <button class="btn-secondary" (click)="closeDeleteModal()" [disabled]="deleting()">
+          Cancel
+        </button>
+        <button class="btn-danger" (click)="confirmDelete()" [disabled]="deleting()">
+          <i class="bi bi-trash"></i>
+          {{ deleting() ? 'Removing…' : 'Yes, remove' }}
+        </button>
+      </footer>
+    </div>
+  </div>
+
 </div>

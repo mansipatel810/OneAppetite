@@ -17,6 +17,8 @@ public class OrderService {
     private OrderRepository orderRepository;
     @Autowired
     private OrderEventPublisher orderEventPublisher;
+    @Autowired
+    private NotificationService notificationService;
 
 
     public Order updateOrderStatus(Integer orderId, OrderStatus newStatus) {
@@ -26,21 +28,40 @@ public class OrderService {
         order.setStatus(newStatus);
         Order savedOrder = orderRepository.save(order);
         orderEventPublisher.publishOrderPlaced(savedOrder);
-        return orderRepository.save(order);
+
+        // Notify customer about status transition
+        if (savedOrder.getUser() != null) {
+            String token = savedOrder.getTokenNumber() != null ? savedOrder.getTokenNumber() : ("#" + savedOrder.getOrderId());
+            String message = switch (newStatus) {
+                case PREPARING -> "Order " + token + " is now being prepared";
+                case READY     -> "Order " + token + " is ready for pickup!";
+                case COMPLETED -> "Order " + token + " has been completed";
+                default        -> "Order " + token + " status: " + newStatus.name();
+            };
+            notificationService.push(savedOrder.getUser().getUserId(), message);
+        }
+        return savedOrder;
     }
-    
+
         public List<Order> getOrdersByVendor(Integer vendorId) {
             return orderRepository.findByVendor_UserIdAndStatusNot(vendorId, OrderStatus.CART);
         }
-    
+
     @Transactional
     public Order placeOrder(Integer userId){
         Order cart = orderRepository.findByUser_UserIdAndStatus(userId, OrderStatus.CART)
                 .orElseThrow(()-> new ResourceNotFoundException("No active cart found for user: " + userId));
         cart.setTokenNumber(generateUniqueToken());
         cart.setStatus(OrderStatus.PLACED);
+        Order saved = orderRepository.save(cart);
 
-        return orderRepository.save(cart);
+        // Notify customer + vendor about the new order
+        notificationService.push(userId, "Order " + saved.getTokenNumber() + " placed successfully");
+        if (saved.getVendor() != null) {
+            notificationService.push(saved.getVendor().getUserId(),
+                    "New order " + saved.getTokenNumber() + " received");
+        }
+        return saved;
     }
 
     private String generateUniqueToken(){

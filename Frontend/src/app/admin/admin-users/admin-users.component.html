@@ -27,12 +27,12 @@
  
     <nav class="sidebar-nav">
       <p class="nav-section-label">Admin</p>
-      <a class="nav-item" routerLink="/admin/dashboard" (click)="closeMobileMenu()">
-        <i class="bi bi-grid-fill"></i> Dashboard
+      <a class="nav-item active" routerLink="/admin/dashboard" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" (click)="closeMobileMenu()">
+        <i class="bi bi-people-fill"></i> User Management
       </a>
-      <!-- <a class="nav-item active" routerLink="/admin/users" (click)="closeMobileMenu()">
-        <i class="bi bi-people-fill"></i> Users
-      </a> -->
+      <a class="nav-item" routerLink="/admin/settings" routerLinkActive="active" (click)="closeMobileMenu()">
+        <i class="bi bi-gear-fill"></i> Settings
+      </a>
     </nav>
  
     <div class="sidebar-footer">
@@ -55,6 +55,14 @@
  
       <div class="topbar-right">
         <span class="role-pill" *ngIf="user">{{ user.role }}</span>
+        <button class="theme-pill" type="button"
+                [class.is-dark]="theme === 'dark'"
+                (click)="toggleTheme()"
+                [attr.aria-label]="theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'"
+                [title]="theme === 'dark' ? 'Light mode' : 'Dark mode'">
+          <i class="bi bi-sun-fill" *ngIf="theme === 'light'"></i>
+          <i class="bi bi-moon-stars-fill" *ngIf="theme === 'dark'"></i>
+        </button>
         <i class="bi bi-bell topbar-icon"></i>
         <div class="avatar-circle">{{ initials(user?.name ?? '') }}</div>
       </div>
@@ -222,14 +230,14 @@
     </main>
  
     <!-- Footer -->
-    <footer class="app-footer">
+    <!-- <footer class="app-footer">
       <span>© 2026 One Appetite. Corporate Cafeteria Solutions.</span>
       <div class="footer-links">
         <a href="#">Support</a>
         <a href="#">Terms of Service</a>
         <a href="#">Privacy Policy</a>
       </div>
-    </footer>
+    </footer> -->
   </div>
 </div>
  

@@ -6,6 +6,7 @@ import {
   ViewChild,
   ElementRef,
   AfterViewChecked,
+  inject,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
@@ -21,12 +22,14 @@ import {
   VendorRegisterPayload,
   UserRole,
 } from '../services/auth.service';
+import { ToastService } from '../services/toast.service';
 
 @Component({
   selector: 'app-register',
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule, RouterLink],
   templateUrl: './register.component.html',
+  styleUrls: ['./register.component.css'],
 })
 export class RegisterComponent implements OnInit, AfterViewChecked {
   registerForm!: FormGroup;
@@ -50,6 +53,8 @@ export class RegisterComponent implements OnInit, AfterViewChecked {
   get isVendor(): boolean {
     return this.registerForm?.get('role')?.value === 'VENDOR';
   }
+
+  private toast = inject(ToastService);
 
   constructor(
     private fb: FormBuilder,
@@ -88,6 +93,10 @@ export class RegisterComponent implements OnInit, AfterViewChecked {
 
   togglePassword(): void {
     this.showPassword = !this.showPassword;
+  }
+
+  comingSoon(provider: string): void {
+    this.toast.info(`${provider} sign-up is coming soon — please use the form below for now.`);
   }
 
   selectRole(role: UserRole): void {
@@ -174,19 +183,17 @@ export class RegisterComponent implements OnInit, AfterViewChecked {
 
   private onRegisterSuccess(res: any): void {
     this.isSubmitting.set(false);
-    console.log('[RegisterComponent] Registration success ->', res);
+    this.toast.success('Account created — please sign in.');
     this.router.navigate(['/login'], {
       queryParams: { registered: 'true' },
     });
   }
 
   private onRegisterError(err: { status: number; message: string }): void {
-    console.error('[RegisterComponent] Registration error ->', err);
     this.isSubmitting.set(false);
     this.serverError.set(err.message);
     this.shouldScrollToError = true;
-    console.log('[RegisterComponent] serverError set to:', this.serverError());
-    console.log('[RegisterComponent] isSubmitting set to:', this.isSubmitting());
+    this.toast.error(err.message || 'Registration failed.');
   }
 
   private getFormErrors(): Record<string, any> {

@@ -10,6 +10,7 @@ public record MenuItemResponse(
         Integer quantityAvailable,
         Boolean isInStock,
         String imageUrl,
+        Integer minPrepTime,
         Integer vendorId,
         String vendorName,
         String vendorDescription,

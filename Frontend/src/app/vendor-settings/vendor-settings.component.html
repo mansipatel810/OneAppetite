@@ -1,0 +1,273 @@
+<div class="vendor-settings-shell">
+
+  <!-- ── Top Nav (matches kanban / menu) ────────────────────── -->
+  <header class="vendor-topbar">
+    <div class="brand">
+      <i class="bi bi-cup-straw"></i>
+      <span>One Appetite — Vendor</span>
+    </div>
+    <nav class="vendor-tabs">
+      <a class="tab" routerLink="/vendor/dashboard">
+        <i class="bi bi-kanban"></i> Kanban
+      </a>
+      <a class="tab" routerLink="/vendor/menu">
+        <i class="bi bi-menu-button-wide-fill"></i> Menu
+      </a>
+      <a class="tab active">
+        <i class="bi bi-gear-fill"></i> Settings
+      </a>
+    </nav>
+    <div class="vendor-meta">
+      <span class="vendor-name">{{ user?.name }}</span>
+      <button class="theme-pill" type="button"
+              [class.is-dark]="theme === 'dark'"
+              (click)="toggleTheme()"
+              [title]="theme === 'dark' ? 'Light mode' : 'Dark mode'">
+        <i class="bi bi-sun-fill" *ngIf="theme === 'light'"></i>
+        <i class="bi bi-moon-stars-fill" *ngIf="theme === 'dark'"></i>
+      </button>
+      <button class="btn-ghost" (click)="logout()">
+        <i class="bi bi-box-arrow-right"></i> Logout
+      </button>
+    </div>
+  </header>
+
+  <main class="settings-main">
+    <header class="settings-header">
+      <h1>Settings</h1>
+      <p class="subtitle">Manage your profile, password, notifications, and stall locations.</p>
+    </header>
+
+    <div class="loading-state" *ngIf="isLoading()">
+      <div class="spinner"></div>
+      <p>Loading your settings…</p>
+    </div>
+
+    <div class="error-state" *ngIf="hasError() && !isLoading()">
+      <i class="bi bi-exclamation-triangle-fill"></i>
+      <p>Couldn't load your profile. Please refresh.</p>
+    </div>
+
+    <div class="settings-grid" *ngIf="profile() as p">
+
+      <!-- ── Profile card ─────────────────────────────────── -->
+      <article class="settings-card">
+        <div class="card-head">
+          <div class="card-title">
+            <i class="bi bi-person-circle"></i>
+            <h2>Profile</h2>
+          </div>
+          <span class="badge badge-role">{{ p.role }}</span>
+        </div>
+
+        <div class="profile-meta">
+          <div class="meta-row">
+            <span class="meta-key">Email</span>
+            <span class="meta-val">{{ p.email }}</span>
+          </div>
+          <div class="meta-row" *ngIf="p.buildingName">
+            <span class="meta-key">Primary Building</span>
+            <span class="meta-val">{{ p.buildingName }}</span>
+          </div>
+        </div>
+
+        <form #profileForm="ngForm" class="form-block" (ngSubmit)="saveProfile(profileForm)">
+          <label class="field">
+            <span>Full name</span>
+            <input type="text" name="name" [(ngModel)]="editName" required minlength="1" maxlength="100" />
+          </label>
+          <label class="field">
+            <span>Phone</span>
+            <input type="tel" name="phone" [(ngModel)]="editPhone" required pattern="^\d{10}$" />
+          </label>
+          <button class="btn-primary" type="submit" [disabled]="savingProfile() || profileForm.invalid">
+            <i class="bi bi-check2"></i>
+            {{ savingProfile() ? 'Saving…' : 'Save changes' }}
+          </button>
+        </form>
+      </article>
+
+      <!-- ── Notifications card ──────────────────────────── -->
+      <article class="settings-card">
+        <div class="card-head">
+          <div class="card-title">
+            <i class="bi bi-bell"></i>
+            <h2>Notifications</h2>
+          </div>
+        </div>
+        <p class="card-blurb">
+          Get pinged when new orders come in or order status changes.
+        </p>
+        <div class="notif-row">
+          <div>
+            <strong>Order updates</strong>
+            <small>{{ p.notificationsEnabled ? 'Currently on' : 'Currently muted' }}</small>
+          </div>
+          <button type="button" class="switch"
+                  [class.on]="p.notificationsEnabled"
+                  [disabled]="togglingNotifs()"
+                  (click)="toggleNotifications()">
+            <span class="knob"></span>
+          </button>
+        </div>
+      </article>
+
+      <!-- ── Password card ─────────────────────────────────── -->
+      <article class="settings-card">
+        <div class="card-head">
+          <div class="card-title">
+            <i class="bi bi-shield-lock"></i>
+            <h2>Password</h2>
+          </div>
+        </div>
+        <p class="card-blurb">Use at least 6 characters. Don't reuse anything elsewhere.</p>
+
+        <form #pwdForm="ngForm" class="form-block" (ngSubmit)="changePassword(pwdForm)">
+          <label class="field">
+            <span>Current password</span>
+            <input type="password" name="current" [(ngModel)]="pwdCurrent" required />
+          </label>
+          <label class="field">
+            <span>New password</span>
+            <input type="password" name="new" [(ngModel)]="pwdNew" minlength="6" required />
+          </label>
+          <label class="field">
+            <span>Confirm new password</span>
+            <input type="password" name="confirm" [(ngModel)]="pwdConfirm" minlength="6" required />
+          </label>
+          <p class="form-error" *ngIf="pwdError()">{{ pwdError() }}</p>
+          <button class="btn-primary" type="submit" [disabled]="changingPassword() || pwdForm.invalid">
+            <i class="bi bi-arrow-repeat"></i>
+            {{ changingPassword() ? 'Updating…' : 'Update password' }}
+          </button>
+        </form>
+      </article>
+
+      <!-- ── Stall Locations (vendor-only) ────────────────── -->
+      <article class="settings-card stall-card">
+        <div class="card-head">
+          <div class="card-title">
+            <i class="bi bi-geo-alt-fill"></i>
+            <h2>Stall Locations</h2>
+          </div>
+          <button class="btn-primary btn-sm" (click)="openAddModal()" [disabled]="loadingLocations() || savingLocations()">
+            <i class="bi bi-plus-lg"></i> Add Location
+          </button>
+        </div>
+        <p class="card-blurb">
+          Open your stall to additional buildings, campuses, or cities. Customers in those locations will see your menu and can place orders.
+        </p>
+
+        <div class="loc-loading" *ngIf="loadingLocations()">
+          <div class="spinner small"></div>
+          <span>Loading locations…</span>
+        </div>
+
+        <ng-container *ngIf="locations() as loc">
+          <!-- Primary -->
+          <div class="loc-section">
+            <div class="loc-section-head">
+              <span class="loc-label">Primary Location</span>
+              <span class="loc-badge primary">Registered</span>
+            </div>
+            <div class="loc-card primary" *ngIf="loc.primaryBuilding">
+              <i class="bi bi-house-fill"></i>
+              <div class="loc-text">
+                <strong>{{ loc.primaryBuilding.buildingName }}</strong>
+                <small>{{ loc.primaryBuilding.campusName }} · {{ loc.primaryBuilding.cityName }}</small>
+              </div>
+            </div>
+          </div>
+
+          <!-- Additional -->
+          <div class="loc-section">
+            <div class="loc-section-head">
+              <span class="loc-label">Also Serving</span>
+              <span class="loc-badge accent">{{ loc.additionalBuildings.length }} extra</span>
+            </div>
+
+            <div class="loc-empty" *ngIf="loc.additionalBuildings.length === 0">
+              <i class="bi bi-pin-map"></i>
+              <span>You're not serving any additional locations yet. Tap "Add Location" to expand your reach.</span>
+            </div>
+
+            <div class="loc-list" *ngIf="loc.additionalBuildings.length > 0">
+              <div class="loc-card extra" *ngFor="let b of loc.additionalBuildings">
+                <i class="bi bi-geo-alt"></i>
+                <div class="loc-text">
+                  <strong>{{ b.buildingName }}</strong>
+                  <small>{{ b.campusName }} · {{ b.cityName }}</small>
+                </div>
+                <button type="button" class="loc-remove" (click)="removeAdditional(b)" [disabled]="savingLocations()">
+                  <i class="bi bi-x-lg"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </ng-container>
+      </article>
+    </div>
+  </main>
+
+  <!-- ── Add Location Modal ──────────────────────────────── -->
+  <div class="modal-backdrop" *ngIf="addModalOpen()" (click)="closeAddModal()">
+    <div class="modal-card" (click)="$event.stopPropagation()" role="dialog" aria-modal="true">
+      <header class="modal-head">
+        <h2><i class="bi bi-geo-alt-fill"></i> Add a New Location</h2>
+        <button class="icon-btn" (click)="closeAddModal()" aria-label="Close" [disabled]="savingLocations()">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </header>
+
+      <div class="modal-body">
+        <p class="modal-intro">
+          Pick a city, campus, and building. Your menu will become visible to customers in that building.
+        </p>
+
+        <div class="form-grid">
+          <label class="field span-2">
+            <span>City</span>
+            <select (change)="onAddCityChange($event)" [value]="selCityId ?? ''">
+              <option value="">Select city</option>
+              <option *ngFor="let c of cities" [value]="c.city_id || c.cityId">
+                {{ c.cityName || c.city_name }}
+              </option>
+            </select>
+          </label>
+
+          <label class="field span-2">
+            <span>Campus</span>
+            <select (change)="onAddCampusChange($event)" [value]="selCampusId ?? ''" [disabled]="!campuses.length">
+              <option value="">Select campus</option>
+              <option *ngFor="let cp of campuses" [value]="cp.campus_id || cp.campusId">
+                {{ cp.campusName || cp.campus_name }}
+              </option>
+            </select>
+          </label>
+
+          <label class="field span-2">
+            <span>Building</span>
+            <select (change)="onAddBuildingChange($event)" [value]="selBuildingId ?? ''" [disabled]="!addBuildings.length">
+              <option value="">Select building</option>
+              <option *ngFor="let b of addBuildings" [value]="b.buildingId || b.building_id">
+                {{ b.buildingName || b.building_name }}
+              </option>
+            </select>
+          </label>
+        </div>
+      </div>
+
+      <footer class="modal-foot">
+        <button class="btn-secondary" (click)="closeAddModal()" [disabled]="savingLocations()">
+          Cancel
+        </button>
+        <button class="btn-primary" (click)="confirmAddLocation()"
+                [disabled]="savingLocations() || !selBuildingId">
+          <i class="bi bi-check2-circle"></i>
+          {{ savingLocations() ? 'Adding…' : 'Add Location' }}
+        </button>
+      </footer>
+    </div>
+  </div>
+
+</div>

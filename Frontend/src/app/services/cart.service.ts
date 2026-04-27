@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
 import { isPlatformBrowser } from '@angular/common';
+import { environment } from '../../environments/environment';
 
 /* ── Shared cart types (imported by menu + cart-view) ─────────── */
 
@@ -79,7 +80,7 @@ export class CartService {
   private platformId = inject(PLATFORM_ID);
   private isBrowser  = isPlatformBrowser(this.platformId);
 
-  private readonly BASE = 'http://localhost:8081';
+  private readonly BASE = environment.apiBase;
 
   /* ── Observable state ──────────────────────────────────────── */
   private _cart$ = new BehaviorSubject<CartState>({ ...EMPTY_STATE, itemMap: new Map() });

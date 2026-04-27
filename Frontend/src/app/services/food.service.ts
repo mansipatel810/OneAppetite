@@ -37,7 +37,9 @@ export class FoodService {
   }
 
   getVendors(buildingId: number): Observable<any[]> {
-    return this.http.get<any[]>(`/vendors/building/${buildingId}`);
+    const url = `/vendors/building/${buildingId}`;
+    console.log('[FoodService] GET', url, '(buildingId type:', typeof buildingId, ')');
+    return this.http.get<any[]>(url);
   }
 
   /** Menu items for a single vendor. Grouped client-side by meal course. */

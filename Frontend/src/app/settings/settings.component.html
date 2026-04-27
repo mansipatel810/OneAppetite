@@ -1,0 +1,181 @@
+<section class="settings-page">
+  <header class="settings-header">
+    <h1>Settings</h1>
+    <p class="subtitle">Manage your profile, notifications, password, and wallet.</p>
+  </header>
+
+  <div class="loading-state" *ngIf="isLoading">
+    <div class="spinner"></div>
+    <p>Loading your settings…</p>
+  </div>
+
+  <div class="error-state" *ngIf="hasError && !isLoading">
+    <i class="bi bi-exclamation-triangle-fill"></i>
+    <p>Couldn't load your profile. Please refresh.</p>
+  </div>
+
+  <div class="settings-grid" *ngIf="profile && !isLoading">
+    <!-- ── Profile card ──────────────────────────────────────── -->
+    <article class="settings-card">
+      <div class="card-head">
+        <div class="card-title">
+          <i class="bi bi-person-circle"></i>
+          <h2>Profile</h2>
+        </div>
+        <span class="badge badge-role">{{ profile.role }}</span>
+      </div>
+
+      <div class="profile-meta">
+        <div class="meta-row">
+          <span class="meta-key">Email</span>
+          <span class="meta-val">{{ profile.email }}</span>
+        </div>
+        <div class="meta-row" *ngIf="profile.buildingName">
+          <span class="meta-key">Building</span>
+          <span class="meta-val">{{ profile.buildingName }}</span>
+        </div>
+      </div>
+
+      <form #profileForm="ngForm" class="form-block" (ngSubmit)="saveProfile(profileForm)">
+        <label class="field">
+          <span>Full name</span>
+          <input
+            type="text"
+            name="name"
+            [(ngModel)]="editName"
+            required
+            minlength="1"
+            maxlength="100"
+            placeholder="Your name" />
+        </label>
+        <label class="field">
+          <span>Phone</span>
+          <input
+            type="tel"
+            name="phone"
+            [(ngModel)]="editPhone"
+            required
+            pattern="^\d{10}$"
+            placeholder="10-digit phone" />
+        </label>
+        <button class="btn-primary" type="submit" [disabled]="savingProfile || profileForm.invalid">
+          <i class="bi bi-check2"></i>
+          {{ savingProfile ? 'Saving…' : 'Save changes' }}
+        </button>
+      </form>
+    </article>
+
+    <!-- ── Notifications card ───────────────────────────────── -->
+    <article class="settings-card">
+      <div class="card-head">
+        <div class="card-title">
+          <i class="bi bi-bell"></i>
+          <h2>Notifications</h2>
+        </div>
+      </div>
+      <p class="card-blurb">
+        Get pinged when your order moves between Placed → Preparing → Ready.
+      </p>
+
+      <div class="notif-row">
+        <div>
+          <strong>Order updates</strong>
+          <small>{{ profile.notificationsEnabled ? 'Currently on' : 'Currently muted' }}</small>
+        </div>
+        <button
+          type="button"
+          class="switch"
+          [class.on]="profile.notificationsEnabled"
+          [disabled]="togglingNotifs"
+          (click)="toggleNotifications()"
+          [attr.aria-pressed]="profile.notificationsEnabled">
+          <span class="knob"></span>
+        </button>
+      </div>
+    </article>
+
+    <!-- ── Wallet card ──────────────────────────────────────── -->
+    <article class="settings-card wallet-card" *ngIf="profile.role === 'EMPLOYEE'">
+      <div class="card-head">
+        <div class="card-title">
+          <i class="bi bi-wallet2"></i>
+          <h2>Wallet</h2>
+        </div>
+      </div>
+
+      <div class="wallet-balance">
+        <span class="wallet-label">Available balance</span>
+        <span class="wallet-amt">₹{{ profile.walletBalance | number:'1.2-2' }}</span>
+      </div>
+
+      <form #topupForm="ngForm" class="form-block" (ngSubmit)="topUp(topupForm)">
+        <div class="quick-amounts">
+          <button
+            type="button"
+            *ngFor="let a of quickAmounts"
+            class="quick-chip"
+            [class.active]="topUpAmount === a"
+            (click)="setQuickAmount(a)">
+            ₹{{ a }}
+          </button>
+        </div>
+
+        <label class="field">
+          <span>Custom amount (₹)</span>
+          <input
+            type="number"
+            name="amount"
+            min="1"
+            [(ngModel)]="topUpAmount"
+            placeholder="e.g. 200" />
+        </label>
+        <label class="field">
+          <span>UPI ID</span>
+          <input
+            type="text"
+            name="upi"
+            [(ngModel)]="topUpUpi"
+            pattern="^[\w.\-]+@[\w.\-]+$"
+            placeholder="yourname@bank"
+            required />
+        </label>
+        <button class="btn-primary" type="submit" [disabled]="toppingUp">
+          <i class="bi bi-plus-circle"></i>
+          {{ toppingUp ? 'Processing…' : 'Top up wallet' }}
+        </button>
+      </form>
+    </article>
+
+    <!-- ── Password card ────────────────────────────────────── -->
+    <article class="settings-card">
+      <div class="card-head">
+        <div class="card-title">
+          <i class="bi bi-shield-lock"></i>
+          <h2>Password</h2>
+        </div>
+      </div>
+      <p class="card-blurb">Use at least 6 characters. Choose something you don't reuse elsewhere.</p>
+
+      <form #pwdForm="ngForm" class="form-block" (ngSubmit)="changePassword(pwdForm)">
+        <label class="field">
+          <span>Current password</span>
+          <input type="password" name="current" [(ngModel)]="pwdCurrent" required />
+        </label>
+        <label class="field">
+          <span>New password</span>
+          <input type="password" name="new" [(ngModel)]="pwdNew" minlength="6" required />
+        </label>
+        <label class="field">
+          <span>Confirm new password</span>
+          <input type="password" name="confirm" [(ngModel)]="pwdConfirm" minlength="6" required />
+        </label>
+        <p class="form-error" *ngIf="pwdError">{{ pwdError }}</p>
+
+        <button class="btn-primary" type="submit" [disabled]="changingPassword || pwdForm.invalid">
+          <i class="bi bi-arrow-repeat"></i>
+          {{ changingPassword ? 'Updating…' : 'Update password' }}
+        </button>
+      </form>
+    </article>
+  </div>
+</section>

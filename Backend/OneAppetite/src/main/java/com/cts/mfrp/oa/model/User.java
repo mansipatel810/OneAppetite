@@ -4,6 +4,10 @@ import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.Set;
+
 @Entity
 @Table(name = "USERS")
 @Data
@@ -35,6 +39,19 @@ public class User {
     @JoinColumn(name = "building_id")
     private Building building;
 
+    /**
+     * Additional buildings a vendor has chosen to also serve.
+     * Their primary {@link #building} is the registration building; this
+     * Set is the extra reach. The vendor query unions both at read time.
+     */
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+            name = "vendor_extra_buildings",
+            joinColumns        = @JoinColumn(name = "user_id"),
+            inverseJoinColumns = @JoinColumn(name = "building_id")
+    )
+    private Set<Building> additionalBuildings = new HashSet<>();
+
     @Column(name = "vendor_name", length = 100)
     private String vendorName;
 
@@ -56,7 +73,11 @@ public class User {
     @Column(name = "vendor_type", length = 20)
     private String vendorType;
 
-    @Column(name = "notifications_enabled", nullable = false)
-    private Boolean notificationsEnabled = true;  // sensible default
+    /* ── Password reset (OTP) ──────────────────────────────────── */
+    @Column(name = "reset_otp", length = 6)
+    private String resetOtp;
+
+    @Column(name = "reset_otp_expiry")
+    private LocalDateTime resetOtpExpiry;
 
 }

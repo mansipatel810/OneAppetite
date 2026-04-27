@@ -41,6 +41,14 @@ public class MenuItemController {
                                @PathVariable Integer itemId) {
         menuItemService.deleteMenuItem(vendorId, itemId);
     }
+
+    // TOGGLE STOCK
+    @PutMapping("/vendor/{vendorId}/item/{itemId}/stock")
+    public MenuItemResponse toggleStock(@PathVariable Integer vendorId,
+                                        @PathVariable Integer itemId,
+                                        @RequestParam Boolean inStock) {
+        return menuItemService.toggleStock(vendorId, itemId, inStock);
+    }
     @GetMapping("/vendor/{vendorId}/breakfast")
     public List<MenuItemResponse> getBreakfastItems(@PathVariable Integer vendorId) {
         return menuItemService.getMenuItemsByVendor(vendorId)

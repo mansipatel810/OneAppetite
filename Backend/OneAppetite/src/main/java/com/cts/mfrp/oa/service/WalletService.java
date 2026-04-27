@@ -14,9 +14,12 @@ import org.springframework.transaction.annotation.Transactional;
 public class WalletService {
 
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
-    public WalletService(UserRepository userRepository) {
+    public WalletService(UserRepository userRepository,
+                         NotificationService notificationService) {
         this.userRepository = userRepository;
+        this.notificationService = notificationService;
     }
 
     public WalletResponse getBalance(Integer userId) {
@@ -30,6 +33,8 @@ public class WalletService {
         double current = user.getWalletBalance() == null ? 0.0 : user.getWalletBalance();
         user.setWalletBalance(current + request.amount());
         User saved = userRepository.save(user);
+        notificationService.push(userId,
+                String.format("Wallet topped up by ₹%.0f", request.amount()));
         return new WalletResponse(saved.getUserId(), saved.getWalletBalance());
     }
 

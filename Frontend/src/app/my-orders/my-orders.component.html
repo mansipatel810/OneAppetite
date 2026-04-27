@@ -1,0 +1,64 @@
+<section class="orders-page">
+  <header class="orders-header">
+    <div>
+      <h1>My Orders</h1>
+      <p class="subtitle">Track everything you've ordered, from placed to ready.</p>
+    </div>
+    <button class="btn-primary" (click)="reorder()">
+      <i class="bi bi-shop"></i> Order Again
+    </button>
+  </header>
+
+  <div class="filter-tabs">
+    <button
+      *ngFor="let f of filters"
+      class="filter-tab"
+      [class.active]="filter === f.key"
+      (click)="setFilter(f.key)">
+      {{ f.label }}
+    </button>
+  </div>
+
+  <div class="orders-state" *ngIf="isLoading">
+    <div class="spinner"></div>
+    <p>Loading your orders…</p>
+  </div>
+
+  <div class="orders-state error" *ngIf="hasError && !isLoading">
+    <i class="bi bi-exclamation-triangle-fill"></i>
+    <p>Couldn't reach the orders service. Try refreshing.</p>
+  </div>
+
+  <div class="orders-state empty" *ngIf="!isLoading && !hasError && filtered.length === 0">
+    <i class="bi bi-receipt"></i>
+    <p>No orders to show here yet.</p>
+  </div>
+
+  <ul class="order-list" *ngIf="!isLoading && filtered.length > 0">
+    <li class="order-card" *ngFor="let order of filtered">
+      <div class="order-card-header">
+        <div class="order-vendor">
+          <span class="token">#{{ order.tokenNumber || '—' }}</span>
+          <h3>{{ vendorLabel(order) }}</h3>
+          <span class="time">{{ formatTime(order.orderTime) }}</span>
+        </div>
+        <span class="status-badge" [class]="statusBadgeClass(order.status)">
+          {{ order.status }}
+        </span>
+      </div>
+
+      <ul class="order-items">
+        <li *ngFor="let it of itemsOf(order)">
+          <span class="item-name">{{ it.menuItem.itemName }}</span>
+          <span class="item-qty">×{{ it.quantity }}</span>
+          <span class="item-price">₹{{ it.price | number:'1.0-0' }}</span>
+        </li>
+      </ul>
+
+      <div class="order-card-footer">
+        <span class="qty-summary">{{ totalQty(order) }} items</span>
+        <span class="total-amt">₹{{ order.totalAmount | number:'1.2-2' }}</span>
+      </div>
+    </li>
+  </ul>
+</section>

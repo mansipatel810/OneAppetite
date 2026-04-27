@@ -84,7 +84,7 @@
   padding: 6px 14px;
   border-radius: 20px;
   border: 1.5px solid #e5e7eb;
-  background: #ffffff;
+  background: var(--oa-surface);
   color: #6b7280;
   font-size: 12.5px;
   font-weight: 500;
@@ -110,7 +110,7 @@
 
 .search-box {
   display: flex; align-items: center; gap: 8px;
-  padding: 8px 14px; background: #fff;
+  padding: 8px 14px; background: var(--oa-surface);
   border: 1px solid #e5e7eb; border-radius: 10px; width: 260px;
   transition: border-color 0.15s, box-shadow 0.15s;
 }
@@ -126,7 +126,7 @@
 
 /* ── Skeleton ────────────────────────────────────────────────── */
 .skeleton-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
-.skeleton-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 14px; overflow: hidden; }
+.skeleton-card { background: var(--oa-surface); border: 1px solid #e5e7eb; border-radius: 14px; overflow: hidden; }
 
 .sk {
   background: linear-gradient(90deg, #f3f4f6 25%, #e9ebee 50%, #f3f4f6 75%);
@@ -159,7 +159,7 @@
 
 /* ── Menu card ───────────────────────────────────────────────── */
 .menu-card {
-  background: #fff; border: 1px solid #e5e7eb; border-radius: 14px;
+  background: var(--oa-surface); border: 1px solid #e5e7eb; border-radius: 14px;
   overflow: hidden; position: relative;
   display: flex; flex-direction: column;
   transition: transform 0.2s, box-shadow 0.2s;
@@ -177,7 +177,7 @@
   position: absolute; top: 10px; left: 10px;
   display: flex; align-items: center; gap: 5px;
   padding: 3px 8px; border-radius: 20px;
-  background: rgba(255,255,255,0.92); backdrop-filter: blur(4px);
+  background: var(--oa-glass-strong); backdrop-filter: var(--oa-glass-blur); -webkit-backdrop-filter: var(--oa-glass-blur);
   border: 1px solid #e5e7eb; z-index: 2;
 }
 .diet-dot          { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
@@ -203,7 +203,7 @@
   display: flex; align-items: center; justify-content: center;
 }
 .out-of-stock-overlay span {
-  background: #fff; color: #374151; font-size: 11px;
+  background: var(--oa-surface); color: #374151; font-size: 11px;
   font-weight: 700; padding: 4px 12px; border-radius: 20px;
   letter-spacing: 0.05em; text-transform: uppercase;
 }

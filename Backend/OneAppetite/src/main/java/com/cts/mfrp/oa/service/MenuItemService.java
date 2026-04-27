@@ -36,6 +36,7 @@ public class MenuItemService {
                 item.getQuantityAvailable(),
                 item.getIsInStock(),
                 item.getImageUrl(),
+                item.getMinPrepTime(),
                 item.getVendor().getUserId(),
                 item.getVendor().getVendorName(),
                 item.getVendor().getVendorDescription(),
@@ -47,6 +48,9 @@ public class MenuItemService {
     public MenuItemResponse addMenuItem(MenuItem item, Integer vendorId) {
         User vendor = validateVendor(vendorId);
         item.setVendor(vendor);
+        if (item.getIsInStock() == null) {
+            item.setIsInStock(Boolean.TRUE);
+        }
         MenuItem saved = menuItemRepo.save(item);
         return toResponse(saved);
     }
@@ -74,9 +78,26 @@ public class MenuItemService {
         existing.setDietaryType(updatedItem.getDietaryType());
         existing.setPrice(updatedItem.getPrice());
         existing.setQuantityAvailable(updatedItem.getQuantityAvailable());
-        existing.setIsInStock(updatedItem.getIsInStock());
+        if (updatedItem.getIsInStock() != null) {
+            existing.setIsInStock(updatedItem.getIsInStock());
+        }
         existing.setImageUrl(updatedItem.getImageUrl());
+        existing.setMinPrepTime(updatedItem.getMinPrepTime());
 
+        MenuItem saved = menuItemRepo.save(existing);
+        return toResponse(saved);
+    }
+
+    // STOCK TOGGLE
+    public MenuItemResponse toggleStock(Integer vendorId, Integer itemId, Boolean inStock) {
+        User vendor = validateVendor(vendorId);
+        MenuItem existing = menuItemRepo.findById(itemId).orElseThrow();
+
+        if (!existing.getVendor().equals(vendor)) {
+            throw new IllegalArgumentException("Vendor does not own this menu item");
+        }
+
+        existing.setIsInStock(Boolean.TRUE.equals(inStock));
         MenuItem saved = menuItemRepo.save(existing);
         return toResponse(saved);
     }

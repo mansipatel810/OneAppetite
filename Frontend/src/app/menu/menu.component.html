@@ -59,12 +59,34 @@
     >{{ cat }}</button>
   </div>
 
-  <!-- ── Search ────────────────────────────────────────────────── -->
+  <!-- ── Search + Dietary toggle ───────────────────────────────── -->
   <div class="search-row">
     <div class="search-box">
       <i class="bi bi-search"></i>
       <input type="text" placeholder="Search menu items…" (input)="onSearch($event)" />
     </div>
+
+    <div class="diet-toggle">
+      <button type="button"
+              class="diet-chip"
+              [class.active]="dietaryFilter === 'ALL'"
+              (click)="setDietaryFilter('ALL')">
+        <i class="bi bi-grid"></i> All
+      </button>
+      <button type="button"
+              class="diet-chip diet-veg"
+              [class.active]="dietaryFilter === 'VEG'"
+              (click)="setDietaryFilter('VEG')">
+        <span class="diet-mark veg"><span></span></span> Veg
+      </button>
+      <button type="button"
+              class="diet-chip diet-nonveg"
+              [class.active]="dietaryFilter === 'NON_VEG'"
+              (click)="setDietaryFilter('NON_VEG')">
+        <span class="diet-mark nonveg"><span></span></span> Non-Veg
+      </button>
+    </div>
+
     <span class="results-count" *ngIf="!isLoading">
       {{ filteredItems.length }} result{{ filteredItems.length !== 1 ? 's' : '' }}
     </span>
@@ -161,13 +183,13 @@
     </a>
   </div>
 
-  <footer class="app-footer">
+  <!-- <footer class="app-footer">
     <span>© 2026 One Appetite. Corporate Cafeteria Solutions.</span>
     <div class="footer-links">
       <a href="#">Support</a>
       <a href="#">Terms of Service</a>
       <a href="#">Privacy Policy</a>
     </div>
-  </footer>
+  </footer> -->
 
 </div>
