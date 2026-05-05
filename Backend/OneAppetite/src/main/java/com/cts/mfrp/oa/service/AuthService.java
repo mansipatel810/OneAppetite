@@ -63,9 +63,9 @@ public class AuthService {
         if (request.role() != null && request.role().equalsIgnoreCase("VENDOR")) {
             throw new InvalidCredentialsException("Vendor registration requires /api/auth/register/vendor endpoint.");
         } else if (request.role() != null && request.role().equalsIgnoreCase("ADMIN")) {
-            if (request.adminSecret() == null || !adminRegistrationSecret.equals(request.adminSecret())) {
-                throw new InvalidCredentialsException("Invalid or missing admin registration secret.");
-            }
+//            if (request.adminSecret() == null || !adminRegistrationSecret.equals(request.adminSecret())) {
+//                throw new InvalidCredentialsException("Invalid or missing admin registration secret.");
+//            }
             user.setRole(Role.ADMIN);
         } else {
             user.setRole(Role.EMPLOYEE);

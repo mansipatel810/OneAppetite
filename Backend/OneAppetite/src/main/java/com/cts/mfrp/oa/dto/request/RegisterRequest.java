@@ -20,6 +20,6 @@ public record RegisterRequest(
                 message = "Password must be at least 8 characters and include uppercase, lowercase, a digit, and a special character (@$!%*?&)"
         )
         String password,
-        String role,
-        String adminSecret
+        String role
+//        String adminSecret
 ) {}
