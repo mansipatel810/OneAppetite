@@ -37,9 +37,28 @@ public class OrderItemController {
         return ResponseEntity.ok(service.getActiveCart(userId));
     }
 
+    /**
+     * Multi-vendor view — returns one CartResponseDTO per vendor bucket.
+     * The frontend cart page renders these as grouped sections.
+     */
+    @GetMapping("/view-all/{userId}")
+    public ResponseEntity<List<CartResponseDTO>> getAllCarts(@PathVariable Integer userId) {
+        return ResponseEntity.ok(service.getActiveCarts(userId));
+    }
+
     @PostMapping("/place/{userId}")
     public ResponseEntity<CartResponseDTO> placeOrder(@PathVariable Integer userId) {
         return ResponseEntity.ok(service.placeOrder(userId));
+    }
+
+    /**
+     * Multi-vendor place — finalizes EVERY cart bucket the user holds and
+     * returns the resulting list of orders (one per vendor) so the frontend
+     * can show every generated token.
+     */
+    @PostMapping("/place-all/{userId}")
+    public ResponseEntity<List<CartResponseDTO>> placeAll(@PathVariable Integer userId) {
+        return ResponseEntity.ok(service.placeAllCarts(userId));
     }
 
     @GetMapping("/history/{userId}")

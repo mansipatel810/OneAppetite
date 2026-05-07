@@ -10,5 +10,7 @@ public record VendorRegisterResponse(
         String vendorDescription,
         Integer buildingId,
         String vendorImageUrl,
-        String vendorType
+        String vendorType,
+        String stallFloor,
+        String stallWing
 ) {}

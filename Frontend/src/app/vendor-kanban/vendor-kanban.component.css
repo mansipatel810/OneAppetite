@@ -409,6 +409,30 @@
   font-size: 12px;
 }
 
+/* "Mark as Picked Up" — emerald gradient CTA shown on Ready cards */
+.btn-pickup {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 9px 14px;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  border: none;
+  border-radius: var(--oa-radius-sm);
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  box-shadow: var(--oa-shadow-success);
+  transition: transform var(--oa-dur-fast) var(--oa-ease),
+              box-shadow var(--oa-dur-fast) var(--oa-ease);
+}
+.btn-pickup:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 32px rgba(16, 185, 129, 0.55);
+}
+
 .drag-hint {
   position: absolute;
   top: 8px;

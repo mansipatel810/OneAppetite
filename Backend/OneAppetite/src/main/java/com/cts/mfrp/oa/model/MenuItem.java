@@ -44,4 +44,19 @@ public class MenuItem {
     private User vendor; // vendor is a User with Role.VENDOR
 
     private Integer minPrepTime;
+
+    /**
+     * Optimistic-locking version column. Hibernate increments this on every
+     * UPDATE and rejects the save with ObjectOptimisticLockingFailureException
+     * if another transaction has already moved the version forward — our
+     * backstop against the "two users buy the last item" race condition.
+     *
+     * The cart placement flow ALSO acquires a pessimistic write lock on each
+     * row (see {@link com.cts.mfrp.oa.repository.MenuItemRepository#findByIdForUpdate}),
+     * so the @Version field is mostly belt-and-braces but matters for any code
+     * path that updates the menu item without going through that lock.
+     */
+    @Version
+    @Column(name = "version", nullable = false)
+    private Long version;
 }

@@ -35,6 +35,7 @@ public class OrderService {
             String message = switch (newStatus) {
                 case PREPARING -> "Order " + token + " is now being prepared";
                 case READY     -> "Order " + token + " is ready for pickup!";
+                case PICKED_UP -> "Order " + token + " — picked up. Enjoy your meal!";
                 case COMPLETED -> "Order " + token + " has been completed";
                 default        -> "Order " + token + " status: " + newStatus.name();
             };

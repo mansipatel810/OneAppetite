@@ -108,6 +108,8 @@ public class AuthService {
         user.setVendorDescription(request.vendorDescription());
         user.setVendorImageUrl(request.vendorImageUrl());
         user.setBuilding(building);
+        user.setStallFloor(request.floor());
+        user.setStallWing(request.wing());
         user.setRole(Role.VENDOR);
         user.setIsActive(true);
 
@@ -123,7 +125,9 @@ public class AuthService {
                 saved.getVendorDescription(),
                 saved.getBuilding().getBuildingId(),
                 saved.getVendorImageUrl(),
-                saved.getVendorType()
+                saved.getVendorType(),
+                saved.getStallFloor(),
+                saved.getStallWing()
         );
     }
 

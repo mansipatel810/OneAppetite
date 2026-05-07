@@ -87,6 +87,23 @@
         </form>
       </article>
 
+      <!-- ── Earnings card (Vendor's money trail) ─────────── -->
+      <article class="settings-card earnings-card">
+        <div class="card-head">
+          <div class="card-title">
+            <i class="bi bi-cash-coin"></i>
+            <h2>Total Earnings</h2>
+          </div>
+        </div>
+        <p class="card-blurb">
+          Every time a customer places an order from your stall, the order total is credited here automatically.
+        </p>
+        <div class="earnings-display">
+          <span class="earnings-label">Lifetime earnings</span>
+          <span class="earnings-amt">₹{{ p.walletBalance | number:'1.2-2' }}</span>
+        </div>
+      </article>
+
       <!-- ── Notifications card ──────────────────────────── -->
       <article class="settings-card">
         <div class="card-head">

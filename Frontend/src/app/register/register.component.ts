@@ -23,6 +23,7 @@ import {
   UserRole,
 } from '../services/auth.service';
 import { ToastService } from '../services/toast.service';
+import { FoodService } from '../services/food.service';
 
 @Component({
   selector: 'app-register',
@@ -55,6 +56,12 @@ export class RegisterComponent implements OnInit, AfterViewChecked {
   }
 
   private toast = inject(ToastService);
+  private foodSvc = inject(FoodService);
+
+  /* Cascade dropdown state — populated when the Vendor role is selected. */
+  cities:    any[] = [];
+  campuses:  any[] = [];
+  buildings: any[] = [];
 
   constructor(
     private fb: FormBuilder,
@@ -71,10 +78,55 @@ export class RegisterComponent implements OnInit, AfterViewChecked {
       role: ['', [Validators.required]],
       vendorName: [''],
       vendorDescription: [''],
-      buildingId: [null],
+      // Vendor-only location fields. We store STRINGS so they line up with
+      // <option [value]="..."> in the template — that's what fixed the
+      // "Chennai can't be selected" bug. Validators are wired in selectRole().
+      cityId:     [''],
+      campusId:   [''],
+      buildingId: [''],
+      floor:      [''],
+      wing:       [''],
     });
 
     console.log('[RegisterComponent] Form initialised');
+  }
+
+  /* ── Cascade handlers ─────────────────────────────────── */
+  onCityChange(event: Event): void {
+    const raw = (event.target as HTMLSelectElement).value;
+    const id  = raw ? Number(raw) : NaN;
+
+    // Reset the downstream legs of the cascade.
+    this.registerForm.patchValue({ cityId: raw, campusId: '', buildingId: '' });
+    this.campuses  = [];
+    this.buildings = [];
+
+    if (Number.isFinite(id) && id > 0) {
+      this.foodSvc.getCampuses(id).subscribe({
+        next: (list) => this.campuses = list ?? [],
+        error: () => this.toast.error('Could not load campuses for this city.'),
+      });
+    }
+  }
+
+  onCampusChange(event: Event): void {
+    const raw = (event.target as HTMLSelectElement).value;
+    const id  = raw ? Number(raw) : NaN;
+
+    this.registerForm.patchValue({ campusId: raw, buildingId: '' });
+    this.buildings = [];
+
+    if (Number.isFinite(id) && id > 0) {
+      this.foodSvc.getBuildings(id).subscribe({
+        next: (list) => this.buildings = list ?? [],
+        error: () => this.toast.error('Could not load buildings for this campus.'),
+      });
+    }
+  }
+
+  onBuildingChange(event: Event): void {
+    const raw = (event.target as HTMLSelectElement).value;
+    this.registerForm.patchValue({ buildingId: raw });
   }
 
   ngAfterViewChecked(): void {
@@ -105,26 +157,36 @@ export class RegisterComponent implements OnInit, AfterViewChecked {
     this.registerForm.controls['role'].markAsTouched();
     this.serverError.set('');
 
-    const vendorNameCtrl = this.f['vendorName'];
-    const vendorDescCtrl = this.f['vendorDescription'];
-    const buildingIdCtrl = this.f['buildingId'];
+    const vendorOnly = ['vendorName', 'vendorDescription', 'cityId', 'campusId', 'buildingId', 'floor', 'wing'];
 
     if (role === 'VENDOR') {
-      vendorNameCtrl.setValidators([Validators.required, Validators.minLength(2)]);
-      vendorDescCtrl.setValidators([Validators.required, Validators.minLength(10)]);
-      buildingIdCtrl.setValidators([Validators.required, Validators.min(1)]);
+      this.f['vendorName'].setValidators([Validators.required, Validators.minLength(2)]);
+      this.f['vendorDescription'].setValidators([Validators.required, Validators.minLength(10)]);
+      // City/campus/building are stored as STRINGS — Validators.required is
+      // enough since '' fails it. Validators.min would be a no-op on strings.
+      this.f['cityId'].setValidators([Validators.required]);
+      this.f['campusId'].setValidators([Validators.required]);
+      this.f['buildingId'].setValidators([Validators.required]);
+      this.f['floor'].setValidators([Validators.required, Validators.maxLength(16)]);
+      this.f['wing'].setValidators([Validators.required, Validators.maxLength(16)]);
+
+      // Lazy-load cities the first time a vendor signup is started.
+      if (this.cities.length === 0) {
+        this.foodSvc.getCities().subscribe(list => this.cities = list);
+      }
     } else {
-      vendorNameCtrl.clearValidators();
-      vendorNameCtrl.reset('');
-      vendorDescCtrl.clearValidators();
-      vendorDescCtrl.reset('');
-      buildingIdCtrl.clearValidators();
-      buildingIdCtrl.reset(null);
+      // All vendor-only controls (string-typed) reset to the empty placeholder
+      // value so the corresponding <option value=""> renders selected.
+      vendorOnly.forEach(name => {
+        const ctrl = this.f[name];
+        ctrl.clearValidators();
+        ctrl.reset('');
+      });
+      this.campuses = [];
+      this.buildings = [];
     }
 
-    [vendorNameCtrl, vendorDescCtrl, buildingIdCtrl].forEach((ctrl) =>
-      ctrl.updateValueAndValidity()
-    );
+    vendorOnly.forEach(name => this.f[name].updateValueAndValidity());
   }
 
   onSubmit(): void {
@@ -153,6 +215,8 @@ export class RegisterComponent implements OnInit, AfterViewChecked {
         vendorName: formVal.vendorName,
         vendorDescription: formVal.vendorDescription,
         buildingId: Number(formVal.buildingId),
+        floor: String(formVal.floor || '').trim(),
+        wing:  String(formVal.wing  || '').trim(),
       };
 
       console.log('[RegisterComponent] Vendor payload ->', vendorPayload);

@@ -73,6 +73,13 @@ public class User {
     @Column(name = "vendor_type", length = 20)
     private String vendorType;
 
+    /* ── Vendor stall location (within their primary building) ── */
+    @Column(name = "stall_floor", length = 16)
+    private String stallFloor;     // e.g. "3", "Ground", "B1"
+
+    @Column(name = "stall_wing", length = 16)
+    private String stallWing;      // e.g. "A", "B", "North"
+
     /* ── Password reset (OTP) ──────────────────────────────────── */
     @Column(name = "reset_otp", length = 6)
     private String resetOtp;

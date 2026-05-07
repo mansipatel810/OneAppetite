@@ -179,6 +179,12 @@
         <div class="vendor-card-body">
           <h3 class="vendor-name">{{ v.vendorName }}</h3>
           <p class="vendor-desc">{{ v.vendorDescription }}</p>
+          <p class="vendor-stall" *ngIf="v.stallFloor || v.stallWing">
+            <i class="bi bi-pin-map-fill"></i>
+            <ng-container *ngIf="v.stallFloor">Floor {{ v.stallFloor }}</ng-container>
+            <ng-container *ngIf="v.stallFloor && v.stallWing"> · </ng-container>
+            <ng-container *ngIf="v.stallWing">Wing {{ v.stallWing }}</ng-container>
+          </p>
           <button class="view-menu-btn" [routerLink]="['/vendor', v.userId]">
             View Menu <i class="bi bi-arrow-right"></i>
           </button>

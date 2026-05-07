@@ -74,16 +74,37 @@ export class NavbarComponent implements OnInit, OnDestroy {
       })
     );
 
-    // Poll every 30s while logged in
-    this.pollSub = interval(30000).subscribe(() => {
-      const session = this.authService.getSession();
-      if (session?.userId) this.notifications.load(session.userId).subscribe();
-    });
+    // Poll every 10s while logged in (was 30s — too slow for status flips)
+    this.pollSub = interval(10000).subscribe(() => this.refetchIfLoggedIn());
+
+    // Re-fetch immediately when the tab becomes visible / regains focus, so
+    // a user who switches back to the tab sees the latest notifications
+    // without waiting for the next poll tick.
+    if (typeof window !== 'undefined') {
+      this.boundFocus      = () => this.refetchIfLoggedIn();
+      this.boundVisibility = () => {
+        if (document.visibilityState === 'visible') this.refetchIfLoggedIn();
+      };
+      window.addEventListener('focus', this.boundFocus);
+      document.addEventListener('visibilitychange', this.boundVisibility);
+    }
+  }
+
+  private boundFocus?: () => void;
+  private boundVisibility?: () => void;
+
+  private refetchIfLoggedIn(): void {
+    const session = this.authService.getSession();
+    if (session?.userId) this.notifications.load(session.userId).subscribe();
   }
 
   ngOnDestroy(): void {
     this.subs.forEach(s => s.unsubscribe());
     this.pollSub?.unsubscribe();
+    if (typeof window !== 'undefined') {
+      if (this.boundFocus)      window.removeEventListener('focus', this.boundFocus);
+      if (this.boundVisibility) document.removeEventListener('visibilitychange', this.boundVisibility);
+    }
   }
 
   hamburgerClick(): void { this.layoutService.toggle(); }

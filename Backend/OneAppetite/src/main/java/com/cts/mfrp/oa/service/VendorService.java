@@ -60,7 +60,9 @@ public class VendorService {
                 v.getVendorDescription(),
                 v.getBuilding() != null ? v.getBuilding().getBuildingId() : null,
                 v.getVendorImageUrl(),
-                v.getVendorType()
+                v.getVendorType(),
+                v.getStallFloor(),
+                v.getStallWing()
         )).toList();
     }
 

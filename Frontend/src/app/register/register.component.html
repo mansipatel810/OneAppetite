@@ -16,16 +16,18 @@
       <p>Whether you're an employee skipping queues or a vendor managing orders, OneAppetite gets you set up in under a minute.</p>
     </div>
 
+    <!-- Same icon set + per-feature accent colors as the Login hero so the
+         left-panel reads as one continuous design across both screens. -->
     <ul class="hero-features">
-      <li><i class="bi bi-person-badge"></i><span>Employees: 1000 wallet credits on signup</span></li>
-      <li><i class="bi bi-shop"></i><span>Vendors: live kanban + menu CRUD out of the box</span></li>
-      <li><i class="bi bi-shield-check"></i><span>Admins: oversight across the entire campus</span></li>
+      <li><i class="bi bi-clock-history"></i><span>Live order status — Placed → Preparing → Ready</span></li>
+      <li><i class="bi bi-wallet2"></i><span>Built-in wallet with quick UPI top-up</span></li>
+      <li><i class="bi bi-shop"></i><span>Multiple vendors across cities and buildings</span></li>
     </ul>
 
     <div class="hero-foodgrid" aria-hidden="true">
-      <span>🥪</span><span>🍱</span><span>🍛</span>
-      <span>🥟</span><span>🍝</span><span>🍰</span>
-      <span>🥤</span><span>☕</span><span>🍦</span>
+      <span>🍔</span><span>🍕</span><span>🥗</span>
+      <span>🍜</span><span>🍣</span><span>🥘</span>
+      <span>🍩</span><span>🍵</span><span>🌮</span>
     </div>
   </aside>
 
@@ -192,21 +194,93 @@
               }
             </label>
 
+            <!-- Stall location: City → Campus → Building cascade.
+                 Note: [value] (string IDs) is used instead of [ngValue]. With
+                 [ngValue] Angular emits internal markers like "0: 1" through
+                 event.target.value, which Number()s to NaN and breaks the
+                 cascade — that was the "Chennai is visible but can't be
+                 selected" bug. -->
             <label class="auth-field">
-              <span class="auth-label">Building ID</span>
+              <span class="auth-label">City</span>
+              <span class="auth-input-wrap"
+                    [class.invalid]="f['cityId'].touched && f['cityId'].invalid">
+                <i class="bi bi-geo-alt"></i>
+                <select formControlName="cityId" (change)="onCityChange($event)">
+                  <option value="">Select a city</option>
+                  <option *ngFor="let c of cities" [value]="c.city_id || c.cityId">
+                    {{ c.cityName || c.city_name }}
+                  </option>
+                </select>
+              </span>
+              @if (f['cityId'].touched && f['cityId'].invalid) {
+                <small class="auth-error">Please select a city.</small>
+              }
+            </label>
+
+            <label class="auth-field">
+              <span class="auth-label">Campus</span>
+              <span class="auth-input-wrap"
+                    [class.invalid]="f['campusId'].touched && f['campusId'].invalid">
+                <i class="bi bi-buildings"></i>
+                <select formControlName="campusId"
+                        (change)="onCampusChange($event)"
+                        [attr.disabled]="campuses.length === 0 ? true : null">
+                  <option value="">Select a campus</option>
+                  <option *ngFor="let cp of campuses" [value]="cp.campus_id || cp.campusId">
+                    {{ cp.campusName || cp.campus_name }}
+                  </option>
+                </select>
+              </span>
+              @if (f['campusId'].touched && f['campusId'].invalid) {
+                <small class="auth-error">Please select a campus.</small>
+              }
+            </label>
+
+            <label class="auth-field">
+              <span class="auth-label">Building</span>
               <span class="auth-input-wrap"
                     [class.invalid]="f['buildingId'].touched && f['buildingId'].invalid">
                 <i class="bi bi-building"></i>
-                <input
-                  type="number"
-                  formControlName="buildingId"
-                  placeholder="e.g. 1"
-                  min="1" />
+                <select formControlName="buildingId"
+                        (change)="onBuildingChange($event)"
+                        [attr.disabled]="buildings.length === 0 ? true : null">
+                  <option value="">Select a building</option>
+                  <option *ngFor="let b of buildings" [value]="b.buildingId || b.building_id">
+                    {{ b.buildingName || b.building_name }}
+                  </option>
+                </select>
               </span>
               @if (f['buildingId'].touched && f['buildingId'].invalid) {
-                <small class="auth-error">Building ID is required (must be ≥ 1).</small>
+                <small class="auth-error">Please select a building.</small>
               }
             </label>
+
+            <!-- Stall position inside the building -->
+            <div class="field-row">
+              <label class="auth-field">
+                <span class="auth-label">Floor</span>
+                <span class="auth-input-wrap"
+                      [class.invalid]="f['floor'].touched && f['floor'].invalid">
+                  <i class="bi bi-layers"></i>
+                  <input type="text" formControlName="floor" maxlength="16" placeholder="e.g. Ground, 3, B1" />
+                </span>
+                @if (f['floor'].touched && f['floor'].invalid) {
+                  <small class="auth-error">Floor is required.</small>
+                }
+              </label>
+
+              <label class="auth-field">
+                <span class="auth-label">Wing</span>
+                <span class="auth-input-wrap"
+                      [class.invalid]="f['wing'].touched && f['wing'].invalid">
+                  <i class="bi bi-compass"></i>
+                  <input type="text" formControlName="wing" maxlength="16" placeholder="e.g. A, B, North" />
+                </span>
+                @if (f['wing'].touched && f['wing'].invalid) {
+                  <small class="auth-error">Wing is required.</small>
+                }
+              </label>
+            </div>
           </div>
         }
 

@@ -9,10 +9,13 @@ export interface OrderItem {
   menuItem: { itemName: string; category: string };
 }
 
+export type OrderStatus =
+  'CART' | 'PLACED' | 'PREPARING' | 'READY' | 'PICKED_UP' | 'COMPLETED' | 'PENDING';
+
 export interface VendorOrder {
   orderId: number;
   tokenNumber: string;
-  status: 'PLACED' | 'PREPARING' | 'PENDING' | 'READY';
+  status: OrderStatus;
   totalAmount: number;
   orderTime: string;
   user: { name: string; email: string };

@@ -208,6 +208,32 @@ export class VendorKanbanComponent implements OnInit, OnDestroy {
     });
   }
 
+  /* ── Mark Ready → Picked Up ──────────────────────────────── */
+  markPickedUp(order: VendorOrder): void {
+    if (order.status !== 'READY') return;
+    if (this.inFlightStatusUpdates.has(order.orderId)) return;
+
+    this.inFlightStatusUpdates.add(order.orderId);
+    this.orderService.updateOrderStatus(order.orderId, 'PICKED_UP').subscribe({
+      next: () => {
+        this.inFlightStatusUpdates.delete(order.orderId);
+        this.toast.success(`Order ${order.tokenNumber} marked as picked up`);
+        // Remove from the Ready column locally for instant feedback;
+        // the next poll will reconcile from the server.
+        this.ordersByStatus = {
+          ...this.ordersByStatus,
+          READY: this.ordersByStatus.READY.filter(o => o.orderId !== order.orderId),
+        };
+        this.cdr.detectChanges();
+        this.loadOrders();
+      },
+      error: () => {
+        this.inFlightStatusUpdates.delete(order.orderId);
+        this.toast.error(`Could not update order ${order.tokenNumber}.`);
+      }
+    });
+  }
+
   logout(): void {
     if (this.pollingInterval) clearInterval(this.pollingInterval);
     this.authService.clearSession();

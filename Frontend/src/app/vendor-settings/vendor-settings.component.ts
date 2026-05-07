@@ -1,5 +1,5 @@
 import {
-  Component, OnInit, ChangeDetectorRef, inject, signal
+  Component, OnInit, ChangeDetectorRef, inject, signal, afterNextRender
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, NgForm } from '@angular/forms';
@@ -68,19 +68,23 @@ export class VendorSettingsComponent implements OnInit {
   selBuildingId: number | null = null;
   selBuildingName = '';
 
-  ngOnInit(): void {
-    const session = this.auth.getSession();
-    if (!session?.userId || session.role !== 'VENDOR') {
-      this.router.navigate(['/login']);
-      return;
-    }
-    this.user = session;
+  constructor() {
+    afterNextRender(() => {
+      const session = this.auth.getSession();
+      if (!session?.userId || session.role !== 'VENDOR') {
+        this.router.navigate(['/login']);
+        return;
+      }
+      this.user = session;
 
-    this.themeSvc.theme$.subscribe(t => { this.theme = t; this.cdr.detectChanges(); });
+      this.themeSvc.theme$.subscribe(t => { this.theme = t; this.cdr.detectChanges(); });
 
-    this.loadProfile(session.userId);
-    this.loadLocations(session.userId);
+      this.loadProfile(session.userId);
+      this.loadLocations(session.userId);
+    });
   }
+
+  ngOnInit(): void { /* session-bound work moved to afterNextRender */ }
 
   /* ── Theme + nav ─────────────────────────────────────── */
   toggleTheme(): void {

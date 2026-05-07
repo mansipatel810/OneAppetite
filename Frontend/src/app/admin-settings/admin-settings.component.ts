@@ -1,5 +1,5 @@
 import {
-  Component, OnInit, ChangeDetectorRef, inject, signal
+  Component, OnInit, ChangeDetectorRef, inject, signal, afterNextRender
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, NgForm } from '@angular/forms';
@@ -46,17 +46,21 @@ export class AdminSettingsComponent implements OnInit {
   // Mobile sidebar
   mobileMenuOpen = false;
 
-  ngOnInit(): void {
-    const session = this.auth.getSession();
-    if (!session?.userId || session.role !== 'ADMIN') {
-      this.router.navigate(['/login']);
-      return;
-    }
-    this.user = session;
+  constructor() {
+    afterNextRender(() => {
+      const session = this.auth.getSession();
+      if (!session?.userId || session.role !== 'ADMIN') {
+        this.router.navigate(['/login']);
+        return;
+      }
+      this.user = session;
 
-    this.themeSvc.theme$.subscribe(t => { this.theme = t; this.cdr.detectChanges(); });
-    this.loadProfile(session.userId);
+      this.themeSvc.theme$.subscribe(t => { this.theme = t; this.cdr.detectChanges(); });
+      this.loadProfile(session.userId);
+    });
   }
+
+  ngOnInit(): void { /* session-bound work moved to afterNextRender */ }
 
   toggleTheme(): void {
     this.themeSvc.toggle();

@@ -1,4 +1,7 @@
-import { Component, OnInit, ChangeDetectorRef, inject } from '@angular/core';
+import {
+  Component, OnInit, OnDestroy, ChangeDetectorRef,
+  inject, afterNextRender, HostListener
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { AuthService } from '../services/auth.service';
@@ -6,7 +9,7 @@ import { OrderHistoryService } from '../services/order-history.service';
 import { CartResponseDTO, CartItemDTO } from '../services/cart.service';
 import { ToastService } from '../services/toast.service';
 
-type StatusFilter = 'ALL' | 'PLACED' | 'PREPARING' | 'READY' | 'COMPLETED';
+type StatusFilter = 'ALL' | 'PLACED' | 'PREPARING' | 'READY' | 'PICKED_UP';
 
 @Component({
   selector: 'app-my-orders',
@@ -15,7 +18,7 @@ type StatusFilter = 'ALL' | 'PLACED' | 'PREPARING' | 'READY' | 'COMPLETED';
   templateUrl: './my-orders.component.html',
   styleUrls: ['./my-orders.component.css']
 })
-export class MyOrdersComponent implements OnInit {
+export class MyOrdersComponent implements OnInit, OnDestroy {
   private auth   = inject(AuthService);
   private orders = inject(OrderHistoryService);
   private router = inject(Router);
@@ -27,21 +30,57 @@ export class MyOrdersComponent implements OnInit {
   all: CartResponseDTO[] = [];
   filter: StatusFilter = 'ALL';
 
+  /** poll handle, set after the first browser-side init */
+  private pollHandle: any;
+  /** cached userId so the poll closure doesn't repeatedly read session */
+  private userId: number | null = null;
+  /** snapshot of last seen statuses keyed by orderId, used to fire toasts */
+  private lastStatuses = new Map<number, string>();
+
   readonly filters: { key: StatusFilter; label: string }[] = [
     { key: 'ALL',       label: 'All' },
     { key: 'PLACED',    label: 'Placed' },
     { key: 'PREPARING', label: 'Preparing' },
     { key: 'READY',     label: 'Ready' },
-    { key: 'COMPLETED', label: 'Completed' },
+    { key: 'PICKED_UP', label: 'Picked Up' },
   ];
 
-  ngOnInit(): void {
-    const session = this.auth.getSession();
-    if (!session?.userId) {
-      this.router.navigate(['/login']);
-      return;
+  constructor() {
+    // Browser-only — Angular SSR runs ngOnInit on the server, where
+    // localStorage is empty, which would redirect us to /login on every refresh.
+    afterNextRender(() => {
+      const session = this.auth.getSession();
+      if (!session?.userId) {
+        this.router.navigate(['/login']);
+        return;
+      }
+      this.userId = session.userId;
+      this.load(session.userId, /*silent*/ false);
+
+      // Auto-refresh every 10s so order status transitions surface without
+      // requiring a manual reload.
+      this.pollHandle = setInterval(() => {
+        if (this.userId) this.load(this.userId, /*silent*/ true);
+      }, 10_000);
+    });
+  }
+
+  ngOnInit(): void { /* session-bound work moved to afterNextRender */ }
+
+  ngOnDestroy(): void {
+    if (this.pollHandle) clearInterval(this.pollHandle);
+  }
+
+  /** When the tab regains focus, fetch immediately for an "instant" feel. */
+  @HostListener('window:focus')
+  onWindowFocus(): void {
+    if (this.userId) this.load(this.userId, /*silent*/ true);
+  }
+  @HostListener('document:visibilitychange')
+  onVisibilityChange(): void {
+    if (document.visibilityState === 'visible' && this.userId) {
+      this.load(this.userId, /*silent*/ true);
     }
-    this.load(session.userId);
   }
 
   setFilter(f: StatusFilter): void { this.filter = f; }
@@ -80,6 +119,7 @@ export class MyOrdersComponent implements OnInit {
       case 'PLACED':    return 'badge-placed';
       case 'PREPARING': return 'badge-preparing';
       case 'READY':     return 'badge-ready';
+      case 'PICKED_UP':
       case 'COMPLETED': return 'badge-completed';
       default:          return 'badge-neutral';
     }
@@ -90,23 +130,51 @@ export class MyOrdersComponent implements OnInit {
     this.router.navigate(['/dashboard']);
   }
 
-  private load(userId: number): void {
-    this.isLoading = true;
-    this.hasError  = false;
+  /**
+   * @param silent  when true, do not flip the loading spinner / error state.
+   *                Used by the 10s poll so the page doesn't flicker.
+   */
+  private load(userId: number, silent: boolean): void {
+    if (!silent) {
+      this.isLoading = true;
+      this.hasError  = false;
+    }
     this.orders.getHistory(userId).subscribe({
       next: (list) => {
-        this.all = (list ?? []).slice().sort((a, b) => {
+        const sorted = (list ?? []).slice().sort((a, b) => {
           const ta = a.orderTime ? new Date(a.orderTime).getTime() : 0;
           const tb = b.orderTime ? new Date(b.orderTime).getTime() : 0;
           return tb - ta;
         });
+
+        // Detect status transitions vs the previous snapshot and toast them.
+        if (silent && this.lastStatuses.size > 0) {
+          for (const order of sorted) {
+            const prev = this.lastStatuses.get(order.orderId);
+            const curr = String(order.status);
+            if (prev && prev !== curr) {
+              const token = order.tokenNumber ?? `#${order.orderId}`;
+              if (curr === 'PREPARING') this.toast.info(`Order ${token} is now being prepared`);
+              else if (curr === 'READY') this.toast.success(`Order ${token} is ready for pickup!`);
+              else if (curr === 'PICKED_UP') this.toast.success(`Order ${token} — picked up. Enjoy!`);
+              else if (curr === 'COMPLETED') this.toast.success(`Order ${token} completed`);
+            }
+          }
+        }
+        // Refresh the snapshot
+        this.lastStatuses.clear();
+        for (const o of sorted) this.lastStatuses.set(o.orderId, String(o.status));
+
+        this.all = sorted;
         this.isLoading = false;
         this.cdr.detectChanges();
       },
       error: () => {
-        this.hasError  = true;
-        this.isLoading = false;
-        this.toast.error('Could not load order history');
+        if (!silent) {
+          this.hasError  = true;
+          this.isLoading = false;
+          this.toast.error('Could not load order history');
+        }
         this.cdr.detectChanges();
       }
     });

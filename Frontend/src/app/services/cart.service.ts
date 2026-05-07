@@ -1,11 +1,11 @@
 import { Injectable, inject, PLATFORM_ID } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { BehaviorSubject, Observable } from 'rxjs';
-import { tap } from 'rxjs/operators';
+import { BehaviorSubject, Observable, of } from 'rxjs';
+import { catchError, tap } from 'rxjs/operators';
 import { isPlatformBrowser } from '@angular/common';
 import { environment } from '../../environments/environment';
 
-/* ── Shared cart types (imported by menu + cart-view) ─────────── */
+/* ── Shared cart types ───────────────────────────────────────── */
 
 export interface CartItemDTO {
   orderItemId: number;
@@ -38,10 +38,10 @@ export interface CartResponseDTO {
     phone?: string;
   };
   items?: CartItemDTO[];
-  orderItems?: CartItemDTO[];  // fallback key some backends use
+  orderItems?: CartItemDTO[];
 }
 
-export interface WalletResponse{
+export interface WalletResponse {
   userId: number;
   walletBalance: number;
 }
@@ -52,26 +52,34 @@ export interface CartRequest {
   quantity: number;
 }
 
-/* ── Local optimistic state ────────────────────────────────────── */
-export interface CartState {
-  /** itemId → CartItemDTO  (source of truth for steppers) */
-  itemMap: Map<number, CartItemDTO>;
+/**
+ * Multi-vendor cart state. We keep one bucket per vendor so the UI can render
+ * grouped sections, while still exposing a flat `itemMap` of every item the
+ * user is holding (so the menu page's per-item stepper continues to work).
+ */
+export interface VendorCartBucket {
+  vendorId: number;
+  vendorName: string;
+  orderId: number;
   totalAmount: number;
-  orderId: number | null;
-  vendor: CartResponseDTO['vendor'] | null;
   readyTime: string | null;
-  tokenNumber: string | null;
   status: string;
+  items: CartItemDTO[];
+}
+
+export interface CartState {
+  /** itemId → CartItemDTO  (flat lookup for menu-page steppers) */
+  itemMap: Map<number, CartItemDTO>;
+  /** One bucket per vendor; ordered by vendor name. */
+  buckets: VendorCartBucket[];
+  /** Sum across every bucket. */
+  totalAmount: number;
 }
 
 const EMPTY_STATE: CartState = {
   itemMap:     new Map(),
+  buckets:     [],
   totalAmount: 0,
-  orderId:     null,
-  vendor:      null,
-  readyTime:   null,
-  tokenNumber: null,
-  status:      'CART',
 };
 
 @Injectable({ providedIn: 'root' })
@@ -82,172 +90,124 @@ export class CartService {
 
   private readonly BASE = environment.apiBase;
 
-  /* ── Observable state ──────────────────────────────────────── */
   private _cart$ = new BehaviorSubject<CartState>({ ...EMPTY_STATE, itemMap: new Map() });
-
-  /** Subscribe to this in any component for live cart state */
   readonly cart$ = this._cart$.asObservable();
 
   get snapshot(): CartState { return this._cart$.getValue(); }
 
-  /* ── Computed helpers ──────────────────────────────────────── */
+  /* ── Computed helpers used by sidebar / menu page ─────────── */
   get cartCount(): number {
     let n = 0;
     this.snapshot.itemMap.forEach(ci => n += ci.quantity);
     return n;
   }
-
-  get cartTotal(): number {
-    let s = 0;
-    this.snapshot.itemMap.forEach(ci => s += ci.menuItem.price * ci.quantity);
-    return s;
-  }
-
+  get cartTotal(): number { return this.snapshot.totalAmount; }
   qtyOf(itemId: number): number {
     return this.snapshot.itemMap.get(itemId)?.quantity ?? 0;
   }
 
-  /* ── API: load cart from backend ───────────────────────────── */
+  /* ── API: load every cart bucket from backend ─────────────── */
   loadCart(userId: number): void {
     if (!this.isBrowser) return;
-    this.http.get<CartResponseDTO>(`${this.BASE}/api/cart/view/${userId}`)
-      .subscribe({
-        next:  (res) => this._applyResponse(res),
-        error: ()    => this._reset(),   // 404 = empty cart, that's fine
-      });
+    this.http.get<CartResponseDTO[]>(`${this.BASE}/api/cart/view-all/${userId}`).pipe(
+      catchError(() => of([] as CartResponseDTO[]))
+    ).subscribe(list => this._applyAll(list));
   }
 
-  /* ── API: add 1 unit ───────────────────────────────────────── */
+  /** Direct observable used by cart-view component on init. */
+  viewAllCarts(userId: number): Observable<CartResponseDTO[]> {
+    return this.http.get<CartResponseDTO[]>(`${this.BASE}/api/cart/view-all/${userId}`).pipe(
+      tap(list => this._applyAll(list)),
+      catchError(() => { this._reset(); return of([] as CartResponseDTO[]); })
+    );
+  }
+
+  /* ── Add / Reduce ─────────────────────────────────────────── */
   addItem(payload: CartRequest): void {
-    // 1. Optimistic update — instant UI response
     this._optimisticAdd(payload.menuItemId);
-
-    // 2. Background API call
-    this.http.post<CartItemDTO>(`${this.BASE}/api/cart/add`, payload)
-      .subscribe({
-        next: (dto) => {
-          // Authoritative update from server (fixes orderItemId, price, qty)
-          const state   = this.snapshot;
-          const newMap  = new Map(state.itemMap);
-          newMap.set(dto.menuItem.itemId, dto);
-          this._emit({
-            ...state,
-            itemMap:     newMap,
-            totalAmount: this._sumMap(newMap),
-          });
-        },
-        error: () => {
-          // Rollback: reload from server
-          this.loadCart(payload.userId);
-        }
-      });
+    this.http.post<CartItemDTO>(`${this.BASE}/api/cart/add`, payload).subscribe({
+      next: () => this.loadCart(payload.userId),    // re-sync for accurate buckets
+      error: () => this.loadCart(payload.userId),   // rollback
+    });
   }
 
-  /* ── API: reduce 1 unit ────────────────────────────────────── */
   reduceItem(userId: number, itemId: number, orderItemId: number): void {
-    // 1. Optimistic update
     this._optimisticReduce(itemId);
-
-    // 2. Background API call
-    this.http.post<void>(`${this.BASE}/api/cart/reduce/${orderItemId}`, {})
-      .subscribe({
-        next: () => {
-          // Light re-sync to get accurate server state (price, totals)
-          this.loadCart(userId);
-        },
-        error: () => {
-          // Rollback
-          this.loadCart(userId);
-        }
-      });
+    this.http.post<void>(`${this.BASE}/api/cart/reduce/${orderItemId}`, {}).subscribe({
+      next:  () => this.loadCart(userId),
+      error: () => this.loadCart(userId),
+    });
   }
 
-  /* ── Direct API observable (for cart-view page) ─────────────── */
-  viewCart(userId: number): Observable<CartResponseDTO> {
-    return this.http.get<CartResponseDTO>(`${this.BASE}/api/cart/view/${userId}`)
-      .pipe(tap(res => this._applyResponse(res)));
-  }
-
-  /* ── API: place order (deducts wallet, status CART→PLACED) ──── */
-  placeOrder(userId: number): Observable<CartResponseDTO> {
-    return this.http.post<CartResponseDTO>(`${this.BASE}/api/cart/place/${userId}`, {})
-      .pipe(tap(res => this._applyResponse(res)));
+  /* ── Place every cart at once (multi-vendor split-order) ──── */
+  placeAll(userId: number): Observable<CartResponseDTO[]> {
+    return this.http.post<CartResponseDTO[]>(`${this.BASE}/api/cart/place-all/${userId}`, {})
+      .pipe(tap(() => this._reset()));
   }
 
   getWalletBalance(userId: number): Observable<WalletResponse> {
     return this.http.get<WalletResponse>(`${this.BASE}/api/wallet/${userId}`);
   }
 
-  /* ── Reset cart state (after successful order) ───────────────── */
-  clearCart(): void {
-    this._reset();
-  }
+  clearCart(): void { this._reset(); }
 
-  /* ── Private helpers ─────────────────────────────────────────── */
+  /* ── Private state helpers ────────────────────────────────── */
+  private _applyAll(list: CartResponseDTO[]): void {
+    const buckets: VendorCartBucket[] = [];
+    const itemMap = new Map<number, CartItemDTO>();
+    let total = 0;
+
+    for (const dto of list ?? []) {
+      const items = dto.items ?? dto.orderItems ?? [];
+      const t = dto.totalAmount ?? 0;
+      total += t;
+      for (const ci of items) itemMap.set(ci.menuItem.itemId, ci);
+      buckets.push({
+        vendorId:    dto.vendor?.userId ?? 0,
+        vendorName:  dto.vendor?.vendorName || dto.vendor?.name || 'Vendor',
+        orderId:     dto.orderId,
+        totalAmount: t,
+        readyTime:   dto.readyTime ?? null,
+        status:      dto.status ?? 'CART',
+        items,
+      });
+    }
+    buckets.sort((a, b) => a.vendorName.localeCompare(b.vendorName));
+
+    this._cart$.next({ itemMap, buckets, totalAmount: total });
+  }
 
   private _optimisticAdd(itemId: number): void {
     const state  = this.snapshot;
     const newMap = new Map(state.itemMap);
     const existing = newMap.get(itemId);
-
     if (existing) {
       newMap.set(itemId, { ...existing, quantity: existing.quantity + 1 });
     } else {
-      // Placeholder entry — server response will fill in orderItemId
       newMap.set(itemId, {
-        orderItemId: -1,   // unknown until server responds
-        quantity:    1,
-        price:       0,
-        menuItem:    { itemId, itemName: '', price: 0 },
+        orderItemId: -1,
+        quantity: 1,
+        price: 0,
+        menuItem: { itemId, itemName: '', price: 0 },
       });
     }
-
-    this._emit({ ...state, itemMap: newMap, totalAmount: this._sumMap(newMap) });
+    this._cart$.next({ ...state, itemMap: newMap });
   }
 
   private _optimisticReduce(itemId: number): void {
-    const state    = this.snapshot;
-    const newMap   = new Map(state.itemMap);
+    const state  = this.snapshot;
+    const newMap = new Map(state.itemMap);
     const existing = newMap.get(itemId);
-
     if (!existing) return;
-
     if (existing.quantity > 1) {
       newMap.set(itemId, { ...existing, quantity: existing.quantity - 1 });
     } else {
       newMap.delete(itemId);
     }
-
-    this._emit({ ...state, itemMap: newMap, totalAmount: this._sumMap(newMap) });
-  }
-
-  private _applyResponse(res: CartResponseDTO): void {
-    const items  = res.items ?? res.orderItems ?? [];
-    const newMap = new Map<number, CartItemDTO>();
-    items.forEach(ci => newMap.set(ci.menuItem.itemId, ci));
-
-    this._emit({
-      itemMap:     newMap,
-      totalAmount: res.totalAmount,
-      orderId:     res.orderId,
-      vendor:      res.vendor ?? null,
-      readyTime:   res.readyTime ?? null,
-      tokenNumber: res.tokenNumber ?? null,
-      status:      res.status,
-    });
+    this._cart$.next({ ...state, itemMap: newMap });
   }
 
   private _reset(): void {
-    this._emit({ ...EMPTY_STATE, itemMap: new Map() });
-  }
-
-  private _emit(state: CartState): void {
-    this._cart$.next(state);
-  }
-
-  private _sumMap(map: Map<number, CartItemDTO>): number {
-    let s = 0;
-    map.forEach(ci => s += ci.menuItem.price * ci.quantity);
-    return s;
+    this._cart$.next({ ...EMPTY_STATE, itemMap: new Map(), buckets: [] });
   }
 }

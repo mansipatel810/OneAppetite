@@ -1,6 +1,7 @@
 import {
   Component,
   OnInit,
+  OnDestroy,
   afterNextRender,
   inject,
   signal,
@@ -42,7 +43,7 @@ interface ItemFormModel {
   templateUrl: './vendor-menu.component.html',
   styleUrls: ['./vendor-menu.component.css'],
 })
-export class VendorMenuComponent implements OnInit {
+export class VendorMenuComponent implements OnInit, OnDestroy {
   private authService = inject(AuthService);
   private foodService = inject(FoodService);
   private menuService = inject(MenuService);
@@ -112,6 +113,9 @@ export class VendorMenuComponent implements OnInit {
 
   form: ItemFormModel = this.emptyForm();
 
+  /** Polling handle for the live-stock auto-refresh (set up in afterNextRender). */
+  private menuPollHandle: any;
+
   constructor() {
     afterNextRender(() => {
       setTimeout(() => {
@@ -122,6 +126,15 @@ export class VendorMenuComponent implements OnInit {
         }
         this.vendorId.set(this.user.userId);
         this.loadMenu(this.user.userId);
+
+        // Auto-refresh every 10s so quantity_available reductions made by
+        // customer placements show up here without a manual reload.
+        // We do a SILENT reload (no spinner) so the page doesn't flicker
+        // while the vendor is actively editing — see loadMenu(silent).
+        this.menuPollHandle = setInterval(() => {
+          const id = this.vendorId();
+          if (id != null) this.loadMenu(id, /* silent */ true);
+        }, 10_000);
       }, 0);
     });
   }
@@ -133,6 +146,10 @@ export class VendorMenuComponent implements OnInit {
     });
   }
 
+  ngOnDestroy(): void {
+    if (this.menuPollHandle) clearInterval(this.menuPollHandle);
+  }
+
   toggleTheme(): void {
     this.themeSvc.toggle();
     this.toast.success(this.themeSvc.current === 'dark'
@@ -140,18 +157,28 @@ export class VendorMenuComponent implements OnInit {
       : 'Theme updated to Light Mode');
   }
 
-  loadMenu(vendorId: number): void {
-    this.loading.set(true);
-    this.error.set(null);
+  /**
+   * @param silent  when true (used by the 10s polling timer), don't flip the
+   *                spinner / clear the error state. Prevents the page from
+   *                flickering while the vendor is editing an item.
+   */
+  loadMenu(vendorId: number, silent: boolean = false): void {
+    if (!silent) {
+      this.loading.set(true);
+      this.error.set(null);
+    }
 
     this.foodService.getMenuItemsByVendor(vendorId).subscribe({
       next: (list) => {
         this.items.set(list ?? []);
         this.loading.set(false);
+        this.cdr.detectChanges();
       },
       error: (e) => {
-        this.error.set(e?.error?.error ?? e?.message ?? 'Failed to load menu.');
-        this.loading.set(false);
+        if (!silent) {
+          this.error.set(e?.error?.error ?? e?.message ?? 'Failed to load menu.');
+          this.loading.set(false);
+        }
       },
     });
   }

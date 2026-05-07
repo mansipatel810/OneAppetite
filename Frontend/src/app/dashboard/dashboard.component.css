@@ -765,9 +765,25 @@
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  margin: 0 0 14px;
+  margin: 0 0 8px;
   min-height: 36px;
 }
+
+/* Stall location strip on the vendor card — Floor X · Wing Y */
+.vendor-stall {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 12px;
+  padding: 4px 10px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--oa-accent-700);
+  background: var(--oa-accent-50);
+  border: 1px solid var(--oa-accent-200);
+  border-radius: var(--oa-radius-pill);
+}
+.vendor-stall i { font-size: 11px; color: var(--oa-accent); }
 
 .view-menu-btn {
   width: 100%;

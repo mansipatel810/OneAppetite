@@ -1,30 +1,41 @@
-<!-- cart-view.component.html -->
 <div class="cart-page">
 
-  <!-- ── Processing overlay (absolute, over cart content) ─────── -->
+  <!-- ── Processing overlay ──────────────────────────────────── -->
   <div class="processing-overlay" *ngIf="isProcessing">
     <div class="processing-card">
       <div class="spinner"></div>
       <h3 class="processing-title">Processing Payment</h3>
-      <p class="processing-sub">Validating your wallet balance…</p>
+      <p class="processing-sub">Splitting your order across vendors and validating your wallet…</p>
     </div>
   </div>
 
-  <!-- ── Order success screen ─────────────────────────────────── -->
+  <!-- ── Multi-vendor success screen ─────────────────────────── -->
   <div class="success-screen" *ngIf="orderSuccess">
     <div class="success-icon-wrap">
       <i class="bi bi-check-circle-fill success-check"></i>
     </div>
-    <h2 class="success-title">Order Confirmed!</h2>
-    <p class="success-sub">₹{{ confirmedTotal | number:'1.2-2' }} has been deducted from your wallet.</p>
-    <div class="success-token" *ngIf="confirmedToken">
-      <span class="token-label">Your Token</span>
-      <span class="token-number">{{ confirmedToken }}</span>
+    <h2 class="success-title">
+      {{ confirmedOrders.length === 1 ? 'Order Confirmed!' : confirmedOrders.length + ' Orders Confirmed!' }}
+    </h2>
+    <p class="success-sub">
+      ₹{{ confirmedTotal | number:'1.2-2' }} has been deducted from your wallet
+      <ng-container *ngIf="confirmedOrders.length > 1">
+        and split across {{ confirmedOrders.length }} vendors.
+      </ng-container>
+    </p>
+
+    <div class="success-tokens">
+      <div class="success-token" *ngFor="let o of confirmedOrders">
+        <span class="token-vendor">{{ o.vendor }}</span>
+        <span class="token-label">YOUR TOKEN</span>
+        <span class="token-number">{{ o.token }}</span>
+        <span class="token-amount">₹{{ o.amount | number:'1.2-2' }}</span>
+      </div>
     </div>
 
     <div>
       <h3 class="wallet-title">Available Wallet Balance</h3>
-      <p class="wallet-balance">₹{{ walletBalance - cartState.totalAmount | number:'1.2-2' }}</p>
+      <p class="wallet-balance">₹{{ walletBalance | number:'1.2-2' }}</p>
     </div>
 
     <a class="go-menu-btn" routerLink="/dashboard">
@@ -32,10 +43,9 @@
     </a>
   </div>
 
-  <!-- ── Normal cart UI (hidden after success) ─────────────────── -->
+  <!-- ── Normal cart UI ──────────────────────────────────────── -->
   <ng-container *ngIf="!orderSuccess">
 
-    <!-- ── Header ─────────────────────────────────────────────── -->
     <div class="cart-header">
       <button class="back-btn-inline" (click)="goBack()">
         <i class="bi bi-arrow-left"></i>
@@ -43,13 +53,13 @@
       <div>
         <h1 class="cart-title">Your Cart</h1>
         <p class="cart-subtitle" *ngIf="!isEmpty && !isLoading">
-          {{ items.length }} item{{ items.length !== 1 ? 's' : '' }} from
-          <strong>{{ vendorName }}</strong>
+          {{ totalItemCount }} item{{ totalItemCount === 1 ? '' : 's' }}
+          across {{ buckets.length }} vendor{{ buckets.length === 1 ? '' : 's' }}
         </p>
       </div>
     </div>
 
-    <!-- ── Loading ────────────────────────────────────────────── -->
+    <!-- Loading skeleton -->
     <div class="cart-skeleton" *ngIf="isLoading">
       <div class="sk-row" *ngFor="let _ of [1,2,3]">
         <div class="sk sk-thumb"></div>
@@ -61,75 +71,66 @@
       </div>
     </div>
 
-    <!-- ── Error ──────────────────────────────────────────────── -->
+    <!-- Error -->
     <div class="empty-state" *ngIf="hasError && !isLoading">
       <i class="bi bi-wifi-off empty-icon"></i>
       <h3>Couldn't load your cart</h3>
       <p>Please check your connection and try again.</p>
     </div>
 
-    <!-- ── Empty state ────────────────────────────────────────── -->
+    <!-- Empty -->
     <div class="empty-state" *ngIf="isEmpty && !hasError">
       <i class="bi bi-bag empty-icon"></i>
       <h3>Your cart is empty</h3>
-      <p>Head back to the menu and add some items.</p>
+      <p>Head back to the menu and add some items — you can mix items from any vendors.</p>
       <a class="go-menu-btn" routerLink="/dashboard">
         <i class="bi bi-arrow-left"></i> Browse Vendors
       </a>
     </div>
 
-    <!-- ── Cart content ───────────────────────────────────────── -->
-    <div class="cart-content" *ngIf="!isLoading && !hasError && !isEmpty">
-
-      <!-- Summary card -->
-      <div class="summary-card">
-        <div class="summary-row">
-          <span class="summary-label"><i class="bi bi-shop"></i> Vendor</span>
-          <span class="summary-value">{{ vendorName }}</span>
-        </div>
-        <div class="summary-row">
-          <span class="summary-label"><i class="bi bi-tag"></i> Status</span>
-          <span class="status-badge">{{ cartState.status }}</span>
-        </div>
-        <div class="summary-row" *ngIf="cartState.tokenNumber">
-          <span class="summary-label"><i class="bi bi-ticket-perforated"></i> Token</span>
-          <span class="token-value">{{ cartState.tokenNumber }}</span>
-        </div>
-        <div class="summary-row" *ngIf="readyTimeFormatted !== '—'">
-          <span class="summary-label"><i class="bi bi-clock"></i> Ready by</span>
-          <span class="ready-time">{{ readyTimeFormatted }}</span>
-        </div>
+    <!-- Wallet card while shopping -->
+    <div class="summary-card summary-card-wallet" *ngIf="!isLoading && !hasError && !isEmpty">
+      <div class="summary-row">
+        <span class="summary-label"><i class="bi bi-wallet2"></i> Wallet Balance</span>
+        <span class="wallet-balance">₹{{ walletBalance | number:'1.2-2' }}</span>
       </div>
-      
-      <div class="summary-card summary-card-wallet">
-        <div class="summary-row">
-          <span class="summary-label"><i class="bi bi-wallet2"></i> Wallet Balance</span>
-          <span class="wallet-balance">₹{{ walletBalance | number:'1.2-2' }}</span>
+    </div>
+
+    <!-- ── One section per vendor bucket ─────────────────────── -->
+    <section class="vendor-section" *ngFor="let b of buckets">
+      <header class="vendor-section-head">
+        <div class="vendor-section-title">
+          <i class="bi bi-shop"></i>
+          <h2>{{ b.vendorName }}</h2>
         </div>
-      </div>
+        <span class="vendor-section-meta">
+          <span class="vendor-section-count">
+            {{ b.items.length }} item{{ b.items.length === 1 ? '' : 's' }}
+          </span>
+          <span class="vendor-section-ready" *ngIf="b.readyTime">
+            <i class="bi bi-clock"></i>
+            Ready by {{ formatReadyTime(b.readyTime) }}
+          </span>
+        </span>
+      </header>
 
-      <!-- Item list -->
-      <div class="item-list">
-        <h2 class="section-title">Items</h2>
-
-        <div class="cart-item" *ngFor="let item of items">
-
-          <!-- Image / placeholder -->
+      <div class="vendor-section-items">
+        <div class="cart-item" *ngFor="let item of b.items">
           <div class="ci-img-wrap">
-            <img *ngIf="item.menuItem.imageUrl" [src]="item.menuItem.imageUrl" [alt]="item.menuItem.itemName" />
+            <img *ngIf="item.menuItem.imageUrl"
+                 [src]="item.menuItem.imageUrl"
+                 [alt]="item.menuItem.itemName" />
             <div *ngIf="!item.menuItem.imageUrl" class="ci-img-placeholder">
               <i class="bi bi-egg-fried"></i>
             </div>
           </div>
 
-          <!-- Details -->
           <div class="ci-details">
             <div class="ci-name">{{ item.menuItem.itemName }}</div>
             <div class="ci-category" *ngIf="item.menuItem.category">{{ item.menuItem.category }}</div>
             <div class="ci-unit-price">₹{{ item.menuItem.price | number:'1.2-2' }} each</div>
           </div>
 
-          <!-- Stepper + subtotal -->
           <div class="ci-right">
             <div class="qty-stepper">
               <button class="stepper-btn" (click)="reduce(item)" [disabled]="isProcessing">
@@ -142,36 +143,39 @@
             </div>
             <span class="ci-subtotal">₹{{ item.price | number:'1.2-2' }}</span>
           </div>
-
         </div>
       </div>
 
-      <!-- Total bar -->
-      <div class="total-bar">
-        <div class="total-row">
-          <span>Subtotal ({{ items.length }} item{{ items.length !== 1 ? 's' : '' }})</span>
-          <span>₹{{ cartState.totalAmount | number:'1.2-2' }}</span>
-        </div>
-        <div class="total-row total-bold">
-          <span>Total</span>
-          <span>₹{{ cartState.totalAmount | number:'1.2-2' }}</span>
-        </div>
+      <footer class="vendor-section-foot">
+        <span>Vendor subtotal</span>
+        <strong>₹{{ b.totalAmount | number:'1.2-2' }}</strong>
+      </footer>
+    </section>
 
-        <!-- Payment error message -->
-        <div class="order-error" *ngIf="orderError">
-          <i class="bi bi-exclamation-circle-fill"></i> {{ orderError }}
-        </div>
-
-        <button class="place-order-btn" (click)="placeOrder()" [disabled]="isProcessing">
-          <i class="bi bi-lightning-fill"></i> Place Order
-        </button>
-        <p class="ready-hint" *ngIf="readyTimeFormatted !== '—'">
-          Estimated ready time: <strong>{{ readyTimeFormatted }}</strong>
-        </p>
+    <!-- ── Grand total + Place Order ─────────────────────────── -->
+    <div class="total-bar" *ngIf="!isLoading && !hasError && !isEmpty">
+      <div class="total-row">
+        <span>{{ totalItemCount }} item{{ totalItemCount === 1 ? '' : 's' }}
+              · {{ buckets.length }} vendor{{ buckets.length === 1 ? '' : 's' }}</span>
+        <span>₹{{ cartState.totalAmount | number:'1.2-2' }}</span>
+      </div>
+      <div class="total-row total-bold">
+        <span>Grand Total</span>
+        <span>₹{{ cartState.totalAmount | number:'1.2-2' }}</span>
       </div>
 
+      <div class="order-error" *ngIf="orderError">
+        <i class="bi bi-exclamation-circle-fill"></i> {{ orderError }}
+      </div>
+
+      <button class="place-order-btn" (click)="placeOrder()" [disabled]="isProcessing">
+        <i class="bi bi-lightning-fill"></i>
+        Place {{ buckets.length === 1 ? 'Order' : buckets.length + ' Orders' }}
+      </button>
+      <p class="ready-hint" *ngIf="buckets.length > 1">
+        Each vendor will receive only their items, and your payment is split between them.
+      </p>
     </div>
 
   </ng-container>
-
 </div>

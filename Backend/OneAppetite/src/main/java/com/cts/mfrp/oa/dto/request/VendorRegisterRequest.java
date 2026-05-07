@@ -30,5 +30,14 @@ public record VendorRegisterRequest(
         @NotNull(message = "Building ID is required")
         Integer buildingId,
 
+        // Stall location inside the building. Floor is a free-form string so
+        // values like "Ground", "B1", or "3" all work. Wing is typically a
+        // single letter (A / B / C) but kept open for things like "North".
+        @NotBlank(message = "Floor is required")
+        String floor,
+
+        @NotBlank(message = "Wing is required")
+        String wing,
+
         String vendorImageUrl
 ) {}

@@ -130,9 +130,10 @@
                       Move to {{ order.status === 'PLACED' ? 'Preparing' : 'Ready' }}
                     </button>
                   } @else {
-                    <div class="ready-banner">
-                      <i class="bi bi-check-circle-fill"></i> Ready for pickup
-                    </div>
+                    <button class="btn-pickup" (click)="markPickedUp(order)">
+                      <i class="bi bi-bag-check-fill"></i>
+                      Mark as Picked Up
+                    </button>
                   }
 
                   <span class="drag-hint" cdkDragHandle>

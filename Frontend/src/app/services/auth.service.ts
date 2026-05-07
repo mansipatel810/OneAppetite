@@ -24,6 +24,8 @@ export interface VendorRegisterPayload {
   vendorName: string;
   vendorDescription: string;
   buildingId: number;
+  floor: string;
+  wing: string;
 }
 
 export interface LoginPayload {

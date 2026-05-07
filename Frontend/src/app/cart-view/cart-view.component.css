@@ -138,6 +138,85 @@
   box-shadow: var(--oa-shadow-sm);
 }
 
+/* ── Vendor section (multi-vendor cart bucket) ───────────────── */
+.vendor-section {
+  background: var(--oa-glass);
+  backdrop-filter: var(--oa-glass-blur);
+  -webkit-backdrop-filter: var(--oa-glass-blur);
+  border: 1px solid var(--oa-border);
+  border-radius: var(--oa-radius-lg);
+  margin-bottom: 16px;
+  overflow: hidden;
+  box-shadow: var(--oa-shadow-sm);
+}
+.vendor-section-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: linear-gradient(135deg,
+    rgba(37, 99, 235, 0.06) 0%,
+    rgba(124, 58, 237, 0.06) 100%);
+  border-bottom: 1px solid var(--oa-border);
+  flex-wrap: wrap;
+}
+.vendor-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.vendor-section-title h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--oa-text);
+  letter-spacing: -0.01em;
+}
+.vendor-section-title i {
+  background: var(--oa-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-size: 18px;
+}
+.vendor-section-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 11.5px;
+  color: var(--oa-text-muted);
+  font-weight: 600;
+}
+.vendor-section-ready {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--oa-success-700);
+}
+.vendor-section-items {
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.vendor-section-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 16px;
+  background: var(--oa-surface-2);
+  border-top: 1px dashed var(--oa-border);
+  font-size: 13px;
+  color: var(--oa-text-muted);
+  font-weight: 600;
+}
+.vendor-section-foot strong {
+  font-size: 15px;
+  color: var(--oa-text);
+  letter-spacing: -0.01em;
+}
+
 /* Wallet card gets a subtle gradient wash */
 .summary-card-wallet {
   background:
@@ -544,18 +623,40 @@
 }
 
 /* Token chip — Blue→Purple */
+/* Container holds N tokens — flex-wrap so 1 centers, many tile */
+.success-tokens {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  max-width: 720px;
+}
+
 .success-token {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   background: linear-gradient(135deg,
     rgba(37, 99, 235, 0.08) 0%,
     rgba(124, 58, 237, 0.10) 100%);
   border: 1px solid var(--oa-primary-200);
   border-radius: var(--oa-radius-lg);
-  padding: 18px 36px;
+  padding: 14px 24px;
+  min-width: 200px;
   box-shadow: var(--oa-shadow-sm);
+}
+.success-token .token-vendor {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--oa-text);
+}
+.success-token .token-amount {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--oa-success-700);
+  margin-top: 2px;
 }
 
 .token-label {

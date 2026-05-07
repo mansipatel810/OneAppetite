@@ -1,4 +1,4 @@
-import { Component, OnInit, ChangeDetectorRef, inject } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef, inject, afterNextRender } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, NgForm } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -48,14 +48,21 @@ export class SettingsComponent implements OnInit {
 
   readonly quickAmounts = [100, 250, 500, 1000];
 
-  ngOnInit(): void {
-    const session = this.auth.getSession();
-    if (!session?.userId) {
-      this.router.navigate(['/login']);
-      return;
-    }
-    this.load(session.userId);
+  constructor() {
+    // Browser-only — Angular SSR runs ngOnInit on the server, where
+    // localStorage is empty. Without this guard, every refresh on /settings
+    // bounces the user to /login.
+    afterNextRender(() => {
+      const session = this.auth.getSession();
+      if (!session?.userId) {
+        this.router.navigate(['/login']);
+        return;
+      }
+      this.load(session.userId);
+    });
   }
+
+  ngOnInit(): void { /* session-bound work moved to afterNextRender */ }
 
   private load(userId: number): void {
     this.isLoading = true;

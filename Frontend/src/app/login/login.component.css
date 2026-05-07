@@ -15,21 +15,32 @@
   display: grid;
   grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
   min-height: 100vh;
+  /* Both columns share the same row track; without this the longer column
+     (usually register's form) stretches the shorter one too. align-items:
+     stretch is the default — that part is fine. */
 }
 
 /* ── Hero panel ─────────────────────────────────────────── */
+/* The hero pins itself to the top of the viewport regardless of form height.
+   Without this, when register's form gets long the hero column stretches and
+   the brand / copy / features / food-grid spread out with huge gaps. */
 .auth-hero {
-  position: relative;
+  position: sticky;
+  top: 0;
+  align-self: start;
+  height: 100vh;
+  max-height: 100vh;
   overflow: hidden;
+
   background:
-    radial-gradient(120% 80% at 0% 0%, rgba(37, 99, 235, 0.55) 0%, transparent 60%),
+    radial-gradient(120% 80% at 0% 0%,   rgba(37, 99, 235, 0.55) 0%, transparent 60%),
     radial-gradient(120% 80% at 100% 100%, rgba(16, 185, 129, 0.45) 0%, transparent 60%),
     var(--oa-gradient-deep);
   color: white;
   padding: clamp(40px, 6vw, 72px);
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  gap: clamp(28px, 4vw, 44px);     /* consistent vertical rhythm */
   isolation: isolate;
 }
 
@@ -519,6 +530,10 @@
 @media (max-width: 960px) {
   .auth-shell { grid-template-columns: 1fr; }
   .auth-hero {
+    /* Un-pin on mobile — let the hero scroll above the form. */
+    position: static;
+    height: auto;
+    max-height: none;
     min-height: auto;
     padding: 36px 28px 28px;
     gap: 24px;

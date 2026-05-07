@@ -129,6 +129,14 @@
         </span>
       </div>
 
+      <!-- Limited-stock pill — shown when 0 < qty < 5. The Out of Stock
+           overlay below already handles the qty=0 case. -->
+      <span class="stock-badge limited"
+            *ngIf="item.isInStock && (item.quantityAvailable || 0) > 0 && (item.quantityAvailable || 0) < 5">
+        <i class="bi bi-fire"></i>
+        Only {{ item.quantityAvailable }} left
+      </span>
+
       <div class="card-img-wrap">
         <img *ngIf="item.imageUrl" [src]="item.imageUrl" [alt]="item.itemName" />
         <div *ngIf="!item.imageUrl" class="card-img-placeholder"><i class="bi bi-egg-fried"></i></div>

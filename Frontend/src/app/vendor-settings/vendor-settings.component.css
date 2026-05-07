@@ -6,6 +6,48 @@
   background: var(--oa-bg);
 }
 
+/* ── Earnings card (vendor money trail) ───────────────────── */
+.earnings-card {
+  position: relative;
+  overflow: hidden;
+}
+.earnings-display {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 18px 20px;
+  border-radius: var(--oa-radius-lg);
+  background: linear-gradient(135deg, #047857 0%, #064e3b 100%);
+  color: white;
+  position: relative;
+  box-shadow: var(--oa-shadow-success);
+}
+.earnings-display::after {
+  content: '';
+  position: absolute;
+  top: -40%;
+  right: -10%;
+  width: 220px; height: 220px;
+  background: radial-gradient(circle, rgba(110, 231, 183, 0.45) 0%, transparent 70%);
+  filter: blur(28px);
+  pointer-events: none;
+}
+.earnings-label {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: rgba(209, 250, 229, 0.85);
+  position: relative;
+  z-index: 1;
+}
+.earnings-amt {
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  position: relative;
+  z-index: 1;
+}
+
 .vendor-settings-shell {
   display: flex;
   flex-direction: column;
