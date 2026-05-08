@@ -3,6 +3,7 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
 import { catchError, tap } from 'rxjs/operators';
 import { isPlatformBrowser } from '@angular/common';
+import { environment } from '../../environments/environment';
 
 /* ──────────────────────────── Types ──────────────────────────── */
 
@@ -64,7 +65,7 @@ export interface ResetPasswordPayload {
   providedIn: 'root',
 })
 export class AuthService {
-  private readonly API_BASE = '/api/auth';
+  private readonly API_BASE = `${environment.apiBase}/api/auth`;
 
   private platformId = inject(PLATFORM_ID);
   private isBrowser  = isPlatformBrowser(this.platformId);

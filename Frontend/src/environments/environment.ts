@@ -1,7 +1,6 @@
 export const environment = {
   production: true,
-  // Empty in dev → relative URLs go through proxy.conf.json to the backend.
-  // In prod, serve frontend behind a reverse proxy that forwards to the API,
-  // or override this to the API origin at build time.
-  apiBase: '',
+  // Render-deployed Spring Boot backend. Frontend (Static Site) calls this
+  // origin directly; CORS is whitelisted server-side via CORS_ALLOWED_ORIGINS.
+  apiBase: 'https://oneappetite.onrender.com',
 };
