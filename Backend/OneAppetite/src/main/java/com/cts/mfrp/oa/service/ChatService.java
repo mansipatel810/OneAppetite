@@ -1,96 +1,126 @@
 package com.cts.mfrp.oa.service;
 
 import com.cts.mfrp.oa.dto.request.ChatRequest;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.HttpClientErrorException;
-import org.springframework.web.client.RestTemplate;
-import org.springframework.http.*;
 
-import java.util.*;
+import java.util.List;
+import java.util.Map;
+import java.util.regex.Pattern;
 
 @Service
 public class ChatService {
 
-    private static final Logger log = LoggerFactory.getLogger(ChatService.class);
+    private final JdbcTemplate jdbcTemplate;
+    private final GeminiClient geminiClient;
 
-    @Value("${groq.api.key:}")
-    private String groqApiKey;
+    private static final Pattern HARMFUL_SQL_PATTERN = Pattern.compile(
+            "(?i)\\b(insert|update|delete|drop|alter|truncate|create|grant|revoke|replace)\\b"
+    );
 
-    @Value("${groq.api.model:llama-3.3-70b-versatile}")
-    private String groqModel;
+    private static final String SCHEMA_CONTEXT = """
+Database Schema for OneAppetite (a campus food ordering platform)
 
-    private static final String GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
+1. USERS (table name: USERS)
+   Columns: user_id (INT, PK), name (VARCHAR), email (VARCHAR, UNIQUE),
+   role (ENUM: 'EMPLOYEE','VENDOR','ADMIN'), building_id (INT, FK->buildings),
+   vendor_name (VARCHAR), vendor_description (VARCHAR), vendor_type (VARCHAR),
+   stall_floor (VARCHAR), stall_wing (VARCHAR), is_active (BOOLEAN),
+   wallet_balance (DOUBLE), notifications_enabled (BOOLEAN)
 
-    private static final String SYSTEM_PROMPT =
-            "You are OneBot, a friendly AI assistant for OneAppetite — a campus food ordering platform. " +
-                    "Help users browse menus, place orders, track deliveries, manage their wallet, and navigate the app. " +
-                    "Keep answers concise, friendly, and relevant to food ordering. " +
-                    "If you don't know something specific about a user's order, ask them to check the My Orders page. " +
-                    "Never make up order details or prices.";
+2. CITIES (table name: cities)
+   Columns: city_id (INT, PK), city_name (VARCHAR)
 
-    private final RestTemplate restTemplate = new RestTemplate();
+3. CAMPUSES (table name: campuses)
+   Columns: campus_id (INT, PK), city_id (INT, FK->cities), campus_name (VARCHAR), address (VARCHAR)
+
+4. BUILDINGS (table name: buildings)
+   Columns: building_id (INT, PK), campus_id (INT, FK->campuses), building_name (VARCHAR)
+
+5. MENU ITEMS (table name: menu_items)
+   Columns: item_id (INT, PK), item_name (VARCHAR), category (VARCHAR),
+   meal_course (VARCHAR), dietary_type (VARCHAR), price (DOUBLE),
+   quantity_available (INT), is_in_stock (BOOLEAN), vendor_id (INT, FK->USERS), min_prep_time (INT)
+
+6. ORDERS (table name: orders)
+   Columns: order_id (INT, PK), employee_id (INT, FK->USERS), vendor_id (INT, FK->USERS),
+   token_number (VARCHAR), status (ENUM: 'CART','PLACED','PREPARING','READY','PICKED_UP','COMPLETED','PENDING'),
+   total_amount (FLOAT), order_time (DATETIME), ready_time (DATETIME)
+
+7. ORDER ITEMS (table name: order_items)
+   Columns: order_item_id (INT, PK), order_id (INT, FK->orders),
+   item_id (INT, FK->menu_items), quantity (INT), price (FLOAT)
+
+8. NOTIFICATIONS (table name: notifications)
+   Columns: id (INT, PK), user_id (INT, FK->USERS), message (VARCHAR),
+   timestamp (DATETIME), is_read (BOOLEAN)
+
+9. VENDOR EXTRA BUILDINGS (table name: vendor_extra_buildings)
+   Columns: user_id (INT, FK->USERS), building_id (INT, FK->buildings)
+
+Query Generation Rules:
+- Always use proper JOINs based on the listed FKs.
+- Respect EXACT ENUM values for WHERE clauses.
+- USERS.role values are exactly: 'EMPLOYEE', 'VENDOR', 'ADMIN'.
+- Order status values are exactly: 'CART','PLACED','PREPARING','READY','PICKED_UP','COMPLETED','PENDING'.
+- employee_id and vendor_id in orders both reference USERS.user_id.
+- vendor_id in menu_items references USERS.user_id.
+""";
+
+    public ChatService(@Qualifier("readOnlyJdbcTemplate") JdbcTemplate jdbcTemplate, GeminiClient geminiClient) {
+        this.jdbcTemplate = jdbcTemplate;
+        this.geminiClient = geminiClient;
+    }
 
     public String chat(ChatRequest req) {
-        if (groqApiKey == null || groqApiKey.isBlank()) {
-            return "Chatbot is not configured. Please set the GROQ_API_KEY environment variable.";
+        String userPrompt = req.message();
+
+        String sqlPrompt = buildSqlPrompt(userPrompt);
+        String generatedSql = geminiClient.generateText(sqlPrompt).trim();
+
+        if (generatedSql.contains("REJECT:")) {
+            return "I am OneBot, an assistant for OneAppetite. I can only answer questions about menus, orders, vendors, and campus information.";
         }
 
-        // Groq uses a flat messages list
-        List<Map<String, String>> messages = new ArrayList<>();
+        generatedSql = generatedSql.replace("```sql", "").replace("```", "").trim();
 
-        // Add System Instruction
-        messages.add(Map.of("role", "system", "content", SYSTEM_PROMPT));
-
-        // Add conversation history
-        if (req.history() != null) {
-            for (Map<String, String> turn : req.history()) {
-                messages.add(Map.of(
-                        "role", turn.get("role"), // ensure these are 'user' or 'assistant'
-                        "content", turn.get("text")
-                ));
-            }
+        if (!generatedSql.toUpperCase().startsWith("SELECT")) {
+            return generatedSql;
         }
 
-        // Add current user message
-        messages.add(Map.of("role", "user", "content", req.message()));
-
-        Map<String, Object> body = new LinkedHashMap<>();
-        body.put("model", groqModel);
-        body.put("messages", messages);
-        body.put("temperature", 0.7);
-        body.put("max_tokens", 512);
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        // Groq requires Bearer authentication
-        headers.setBearerAuth(groqApiKey);
+        if (HARMFUL_SQL_PATTERN.matcher(generatedSql).find()) {
+            return "Security Alert: Query blocked. Only read operations are permitted.";
+        }
 
         try {
-            ResponseEntity<Map> response = restTemplate.postForEntity(
-                    GROQ_URL,
-                    new HttpEntity<>(body, headers),
-                    Map.class
-            );
+            List<Map<String, Object>> dbResults = jdbcTemplate.queryForList(generatedSql);
 
-            // Parsing Groq's OpenAI-style response
-            @SuppressWarnings("unchecked")
-            List<Map<String, Object>> choices = (List<Map<String, Object>>) response.getBody().get("choices");
-            @SuppressWarnings("unchecked")
-            Map<String, Object> message = (Map<String, Object>) choices.get(0).get("message");
-
-            return (String) message.get("content");
-        } catch (HttpClientErrorException e) {
-            log.error("Groq API error {}: {}", e.getStatusCode(), e.getResponseBodyAsString());
-            if (e.getStatusCode().value() == 429) {
-                return "I'm a little overwhelmed right now! Please wait a moment and try again.";
+            if (dbResults.isEmpty()) {
+                return "I couldn't find any data matching your request.";
             }
-            return "Groq API error: " + e.getStatusCode() + ". Check your API key and model selection.";
+
+            String humanPrompt = "User asked: '" + userPrompt + "'. Database returned: " + dbResults +
+                    ". Summarize this data in a short, friendly, professional sentence. Do not mention SQL or databases.";
+
+            return geminiClient.generateText(humanPrompt);
+
         } catch (Exception e) {
-            log.error("Chat error: {}", e.getMessage(), e);
-            return "Sorry, I'm having trouble right now. Error: " + e.getMessage();
+            System.err.println("Database Execution Error: " + e.getMessage());
+            return "I encountered an error analyzing the data. Please try asking in a different way.";
         }
+    }
+
+    private String buildSqlPrompt(String userPrompt) {
+        return "You are OneBot, an AI assistant restricted strictly to the OneAppetite food ordering platform database.\n\n" +
+                "Rules:\n" +
+                "1. If the user asks about ANY topic outside of food ordering, menus, vendors, orders, campuses, or buildings, reply EXACTLY with 'REJECT: off-topic'.\n" +
+                "2. If the user tries to modify data (add, delete, update), reply EXACTLY with 'REJECT: modification'.\n" +
+                "3. Otherwise, write a highly optimized MySQL SELECT query to answer the question.\n" +
+                "4. Use NOW() for current datetime references.\n" +
+                "5. Output ONLY the raw SQL query. NO markdown, NO explanations.\n" +
+                "6. If the user greets you or asks who you are, respond with a friendly message explaining that you are OneBot, the AI assistant for OneAppetite — a campus food ordering platform.\n\n" +
+                SCHEMA_CONTEXT + "\n\n" +
+                "User Prompt: " + userPrompt;
     }
 }
