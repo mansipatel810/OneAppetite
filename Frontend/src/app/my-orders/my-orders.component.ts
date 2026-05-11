@@ -125,10 +125,7 @@ export class MyOrdersComponent implements OnInit, OnDestroy {
     }
   }
 
-  reorder(): void {
-    this.toast.info('Reorder coming soon — heading back to dashboard');
-    this.router.navigate(['/dashboard']);
-  }
+  
 
   /**
    * @param silent  when true, do not flip the loading spinner / error state.

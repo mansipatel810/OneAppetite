@@ -195,29 +195,6 @@
   color: #a7f3d0;
 }
 
-.hero-foodgrid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16px;
-  align-self: flex-start;
-  width: 100%;
-  max-width: 320px;
-  position: relative;
-  z-index: 1;
-}
-.hero-foodgrid span {
-  aspect-ratio: 1 / 1;
-  display: grid;
-  place-items: center;
-  font-size: 32px;
-  background: rgba(255, 255, 255, 0.10);
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  border-radius: var(--oa-radius-lg);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
-  transition: transform var(--oa-dur-med) var(--oa-ease);
-}
-.hero-foodgrid span:hover { transform: translateY(-3px) scale(1.04); }
 
 /* ── Form panel ─────────────────────────────────────────── */
 .auth-form-panel {
@@ -243,7 +220,6 @@
 /* Hero copy lifts in slightly later for staggered reveal */
 .auth-hero .hero-copy   { animation: auth-fade-up 620ms cubic-bezier(0.22, 1, 0.36, 1) 60ms both; }
 .auth-hero .hero-features { animation: auth-fade-up 700ms cubic-bezier(0.22, 1, 0.36, 1) 140ms both; }
-.auth-hero .hero-foodgrid { animation: auth-fade-up 780ms cubic-bezier(0.22, 1, 0.36, 1) 220ms both; }
 
 @keyframes auth-fade-up {
   from { opacity: 0; transform: translateY(14px); }
@@ -539,18 +515,12 @@
     gap: 24px;
   }
   .hero-features { display: none; }
-  .hero-foodgrid {
-    max-width: none;
-    grid-template-columns: repeat(6, minmax(0, 1fr));
-  }
-  .hero-foodgrid span:nth-child(n+7) { display: none; }
-  .hero-foodgrid span { font-size: 22px; }
+  
   .auth-form-panel { padding: 32px 20px 24px; }
 }
 
 @media (max-width: 540px) {
   .role-grid { grid-template-columns: 1fr; }
   .role-chip { flex-direction: row; padding: 10px 14px; }
-  .hero-foodgrid { display: none; }
   .auth-card-head h2 { font-size: 22px; }
 }

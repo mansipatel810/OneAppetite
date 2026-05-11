@@ -5,22 +5,7 @@
   <div class="topbar-right">
     <span class="role-pill" *ngIf="user">{{ user.role }}</span>
 
-    <div class="search-pill">
-      <i class="bi bi-search"></i>
-      <input
-        type="text"
-        placeholder="Search menu items..."
-        [ngModel]="searchTerm"
-        (ngModelChange)="onSearchInput($event)" />
-      <button
-        *ngIf="searchTerm"
-        class="search-clear"
-        type="button"
-        (click)="clearSearch()"
-        aria-label="Clear search">
-        <i class="bi bi-x-circle-fill"></i>
-      </button>
-    </div>
+    
 
     <!-- Theme toggle (sun ↔ moon) -->
     <button class="theme-toggle" type="button"
