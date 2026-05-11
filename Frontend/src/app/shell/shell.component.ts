@@ -2,11 +2,12 @@ import { Component } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { SidebarComponent } from '../sidebar/sidebar.component';
 import { NavbarComponent }  from '../navbar/navbar.component';
+import { ChatbotComponent } from '../chatbot/chatbot.component';
 
 @Component({
   selector: 'app-shell',
   standalone: true,
-  imports: [RouterOutlet, SidebarComponent, NavbarComponent],
+  imports: [RouterOutlet, SidebarComponent, NavbarComponent, ChatbotComponent],
   template: `
     <div class="app-shell">
       <app-sidebar></app-sidebar>
@@ -19,6 +20,7 @@ import { NavbarComponent }  from '../navbar/navbar.component';
         </main>
       </div>
     </div>
+    <app-chatbot></app-chatbot>
   `,
   styles: [`
     .app-shell {
