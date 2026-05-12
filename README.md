@@ -2,7 +2,7 @@
 
 > Corporate cafeteria management — campus discovery, multi-vendor cart, real-time inventory, and an AI concierge.
 
-OneAppetite is a full-stack corporate cafeteria management system that lets employees on a campus discover food vendors building-by-building, browse menus, add items from multiple vendors into a single cart, pay via in-app wallet, and pick up orders with a token number. Vendors get a Kanban board for live order management; admins get a control panel for vendor and employee oversight. The platform is backed by an AI chatbot (Groq / Llama 3.3 70B) for natural-language help.
+OneAppetite is a full-stack corporate cafeteria management system that lets employees on a campus discover food vendors building-by-building, browse menus, add items from multiple vendors into a single cart, pay via in-app wallet, and pick up orders with a token number. Vendors get a Kanban board for live order management; admins get a control panel for vendor and employee oversight. The platform is backed by an AI chatbot (gemini / Llama 3.3 70B) for natural-language help.
 
 ---
 
@@ -74,7 +74,7 @@ OneAppetite is a full-stack corporate cafeteria management system that lets empl
                           │ JDBC over SSL                │ HTTPS
                           ▼                              ▼
        ┌──────────────────────────────────┐   ┌─────────────────────────┐
-       │   Aiven Managed MySQL (cloud)    │   │      Groq API           │
+       │   Aiven Managed MySQL (cloud)    │   │      gemini API           │
        │   ────────────────────────────   │   │   Llama 3.3 70B         │
        │   Tables:                        │   │   (AI chatbot backend)  │
        │   • users (role, wallet_balance, │   └─────────────────────────┘
@@ -99,7 +99,7 @@ OneAppetite is a full-stack corporate cafeteria management system that lets empl
 | Database    | MySQL 8 (Aiven managed cloud, SSL required)                           |
 | ORM         | Hibernate (with `@Version` optimistic locking + pessimistic write locks) |
 | Auth        | jBCrypt 0.4 password hashing                                          |
-| AI          | Groq API — `llama-3.3-70b-versatile`                                  |
+| AI          | gemini API — `llama-3.3-70b-versatile`                                  |
 | Build       | Maven (backend), `@angular/build:application` (frontend)              |
 | Deploy      | Render.com (Docker Web Service + Angular Static Site)                 |
 | Dev proxy   | `proxy.conf.json` (Vite dev server → `localhost:8081`)                |
@@ -229,7 +229,7 @@ export DB_PORT=3306
 export DB_NAME=oneappetite
 export DB_USER=root
 export DB_PASSWORD=secret
-export GROQ_API_KEY=gsk_...       # optional, chatbot disabled if blank
+export GEMINI_API_KEY=gsk_...       # optional, chatbot disabled if blank
 
 ./mvnw spring-boot:run
 # Backend listens on http://localhost:8081
@@ -252,7 +252,7 @@ On first boot, `DataLoader` seeds Chennai with 5 campuses and their buildings if
 ### Backend (Render Web Service)
 - **Runtime:** Docker (via included `Dockerfile`)
 - **Root directory:** `Backend/OneAppetite`
-- **Environment variables:** `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `GROQ_API_KEY`, `CORS_ALLOWED_ORIGINS`
+- **Environment variables:** `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `gemini_API_KEY`, `CORS_ALLOWED_ORIGINS`
 - **Port:** auto-injected by Render via `$PORT` (read by `server.port=${PORT:8081}`)
 
 ### Frontend (Render Static Site)
