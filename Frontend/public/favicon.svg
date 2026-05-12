@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!--
+    OneAppetite favicon
+    A steaming bowl on a blue→purple gradient.
+    Designed to read clearly at 16x16 px in browser tabs.
+  -->
+  <defs>
+    <linearGradient id="oa-bg" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#3B82F6"/>
+      <stop offset="1" stop-color="#7C3AED"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Rounded-square background -->
+  <rect width="64" height="64" rx="14" fill="url(#oa-bg)"/>
+
+  <!-- Three steam wisps rising from the bowl -->
+  <path d="M22 20 Q26 14 22 8"  stroke="white" stroke-width="3" stroke-linecap="round" fill="none" opacity="0.85"/>
+  <path d="M32 18 Q36 12 32 6"  stroke="white" stroke-width="3" stroke-linecap="round" fill="none" opacity="0.85"/>
+  <path d="M42 20 Q46 14 42 8"  stroke="white" stroke-width="3" stroke-linecap="round" fill="none" opacity="0.85"/>
+
+  <!-- Plate / bowl rim (soft top ellipse) -->
+  <ellipse cx="32" cy="30" rx="22" ry="3" fill="white" opacity="0.35"/>
+
+  <!-- Bowl body -->
+  <path d="M10 30 Q10 52 32 52 Q54 52 54 30 Z" fill="white"/>
+</svg>
