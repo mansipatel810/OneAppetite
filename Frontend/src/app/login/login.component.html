@@ -72,7 +72,7 @@
         <label class="auth-field">
           <span class="auth-label-row">
             <span class="auth-label">Password</span>
-            <a href="#" class="auth-forgot" (click)="openForgotPassword($event)">Forgot password?</a>
+            <!-- <a href="#" class="auth-forgot" (click)="openForgotPassword($event)">Forgot password?</a> -->
           </span>
           <span class="auth-input-wrap"
                 [class.invalid]="f['password'].touched && f['password'].invalid">
@@ -175,9 +175,9 @@
   </main>
 
   <!-- ── Forgot Password Modal ─────────────────────────────── -->
-  <app-forgot-password-modal
+  <!-- <app-forgot-password-modal
     *ngIf="showForgotPassword()"
     (closed)="closeForgotPassword()"
     (resetCompleted)="closeForgotPassword()">
-  </app-forgot-password-modal>
+  </app-forgot-password-modal> -->
 </div>
