@@ -2,12 +2,11 @@ import { Component } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { SidebarComponent } from '../sidebar/sidebar.component';
 import { NavbarComponent }  from '../navbar/navbar.component';
-import { ChatbotComponent } from '../chatbot/chatbot.component';
 
 @Component({
   selector: 'app-shell',
   standalone: true,
-  imports: [RouterOutlet, SidebarComponent, NavbarComponent, ChatbotComponent],
+  imports: [RouterOutlet, SidebarComponent, NavbarComponent],
   template: `
     <div class="app-shell">
       <app-sidebar></app-sidebar>
@@ -20,7 +19,8 @@ import { ChatbotComponent } from '../chatbot/chatbot.component';
         </main>
       </div>
     </div>
-    <app-chatbot></app-chatbot>
+    <!-- Chatbot is now rendered globally from app.html so it appears on
+         vendor and admin pages too (which don't use this shell). -->
   `,
   styles: [`
     .app-shell {

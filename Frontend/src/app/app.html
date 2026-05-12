@@ -1,3 +1,9 @@
 <!-- app.component.html -->
 <router-outlet></router-outlet>
 <app-toast-host></app-toast-host>
+
+<!-- Floating OneBot — visible on every authenticated page
+     (employee shell, vendor kanban/menu/settings, admin users/settings). -->
+@if (showChatbot) {
+  <app-chatbot></app-chatbot>
+}

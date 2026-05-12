@@ -16,8 +16,12 @@ public class GeminiClient {
     @Value("${gemini.api.key:}")
     private String apiKey;
 
+    // gemini-2.5-flash-lite: stable (July 2025), "lite" tier = more generous free quota.
+    // Google's free-tier model availability varies by project. We tried gemini-2.5-flash
+    // (20/day cap) and gemini-2.0-flash (no free-tier access at all in this project).
+    // gemini-2.5-flash-lite is typically the most accessible free-tier model.
     private static final String GEMINI_API_URL =
-            "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent";
+            "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent";
 
     private final RestTemplate restTemplate = new RestTemplate();
 
