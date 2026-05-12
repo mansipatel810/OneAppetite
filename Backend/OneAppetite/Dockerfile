@@ -1,6 +1,12 @@
 # Multi-stage build: compile with Maven, run on a slim JRE.
 # Render builds this image from Backend/OneAppetite (set as Root Directory).
 
+ENTRYPOINT ["java", \
+            "-XX:MaxRAMPercentage=75.0", \
+            "-XX:+UseSerialGC", \
+            "-Xss256k", \
+            "-jar", "/app/app.jar"]
+
 # ---- Build stage ----
 FROM maven:3.9-eclipse-temurin-17 AS build
 WORKDIR /app
