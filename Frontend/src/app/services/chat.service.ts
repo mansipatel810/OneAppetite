@@ -22,11 +22,11 @@ export class ChatService {
   private readonly BASE = `${environment.apiBase}/api/chat`;
 
   /**
-   * Send the user's message to the chatbot. We attach the logged-in user's
-   * role + userId so the backend can scope SQL queries appropriately:
-   *   - VENDOR: their own sales / menu / orders
-   *   - ADMIN: cross-cutting analytics on users/vendors/orders
-   *   - EMPLOYEE: their own cart / orders / menu browsing
+   * Send the user's message to the campus food guide. Per the zero-data
+   * privacy policy we DO NOT send userId — the backend operates as if every
+   * caller is anonymous. We still send the role so the server can hard-block
+   * ADMIN as a second line of defense (the chatbot is hidden in the UI for
+   * admins too).
    */
   send(message: string, history: ChatTurn[]): Observable<{ reply: string }> {
     const session = this.auth.getSession();
@@ -34,7 +34,6 @@ export class ChatService {
       message,
       history,
       role: session?.role ?? null,
-      userId: session?.userId ?? null,
     };
     return this.http.post<{ reply: string }>(this.BASE, body);
   }

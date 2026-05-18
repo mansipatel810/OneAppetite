@@ -18,10 +18,10 @@ export class App {
   private router = inject(Router);
 
   /**
-   * Show the floating chatbot on every authenticated page (employee,
-   * vendor, admin). Hidden on /login and /register where there's no
-   * session. We re-evaluate on every route change so logout immediately
-   * hides the widget.
+   * Show the floating campus food guide on every authenticated page except
+   * the admin dashboard (campus privacy policy — admins cannot access the
+   * chatbot). Hidden on /login and /register where there's no session.
+   * Re-evaluated on every route change so logout immediately hides it.
    */
   showChatbot = false;
 
@@ -35,6 +35,7 @@ export class App {
   private updateChatbotVisibility(): void {
     const url = this.router.url.toLowerCase();
     const isAuthPage = url.startsWith('/login') || url.startsWith('/register');
-    this.showChatbot = this.auth.isLoggedIn() && !isAuthPage;
+    const isAdmin    = this.auth.getSession()?.role === 'ADMIN';
+    this.showChatbot = this.auth.isLoggedIn() && !isAuthPage && !isAdmin;
   }
 }

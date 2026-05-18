@@ -16,7 +16,7 @@ export class ChatbotComponent {
   open = signal(false);
   input = '';
   messages = signal<ChatMessage[]>([
-    { from: 'bot', text: "Hi! I'm OneBot 🤖 Your AI assistant for OneAppetite. Ask me anything about ordering food, your wallet, or navigating the app!" },
+    { from: 'bot', text: "Hi! I'm the campus food guide. Ask me what's available right now across the cafes and dining halls, or about calorie estimates for any item." },
   ]);
 
   private history: ChatTurn[] = [];

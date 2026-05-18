@@ -5,227 +5,293 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 
+/**
+ * Campus food guide — anonymous, stateless menu navigation + calorie estimates.
+ *
+ * Per campus policy:
+ *   - Admins cannot access the chatbot at all (UI hides it; this service hard-blocks too).
+ *   - No user-specific data is ever read. Tables like orders, order_items, notifications
+ *     are forbidden; columns like wallet_balance, email, phone are forbidden.
+ *   - Personal questions ("what did I eat yesterday?") trigger an exact rebuff line.
+ *   - Every menu listing is restricted to items in stock right now.
+ *   - The current wall-clock time biases suggestions toward the appropriate meal course.
+ */
 @Service
 public class ChatService {
 
     private final JdbcTemplate jdbcTemplate;
     private final GeminiClient geminiClient;
 
+    /** Exact wording mandated by the campus privacy policy. Do not edit. */
+    private static final String PRIVACY_REBUFF =
+            "I do not have access to personal accounts or history. " +
+            "I can, however, help you with calorie estimates or today's campus menu.";
+
+    /** Generic "I'm only a food guide" reply for off-topic / out-of-scope asks. */
+    private static final String SCOPE_REBUFF =
+            "I'm the campus food guide. I can suggest dishes that are in stock right now, " +
+            "share calorie estimates, and tell you where to find them on campus.";
+
+    /** Reply when an admin somehow reaches the endpoint (UI hides it, but defense in depth). */
+    private static final String ADMIN_BLOCK_REPLY =
+            "The campus food guide isn't available on the admin dashboard.";
+
+    /** Friendly in-persona reply when Gemini errors out (rate limit, safety block, etc.). */
+    private static final String SERVICE_HICCUP_REPLY =
+            "I'm having a brief moment — please try again in a few seconds.";
+
+    /** Block any write/DDL SQL coming out of the LLM. */
     private static final Pattern HARMFUL_SQL_PATTERN = Pattern.compile(
             "(?i)\\b(insert|update|delete|drop|alter|truncate|create|grant|revoke|replace)\\b"
     );
 
     /**
-     * Sensitive columns the chatbot must NEVER expose regardless of role.
-     * Even if the LLM is jailbroken or misinterprets the prompt, any generated
-     * SQL referencing these will be blocked before execution.
+     * Tables the food guide must never touch — all of them carry user-specific
+     * data. Hitting these triggers the privacy rebuff regardless of role.
+     */
+    private static final Pattern FORBIDDEN_TABLES_PATTERN = Pattern.compile(
+            "(?i)\\b(orders|order_items|notifications)\\b"
+    );
+
+    /**
+     * Sensitive user columns. None of these are needed for menu navigation,
+     * so even a mention in the generated SQL is treated as a privacy breach.
+     *
+     * Note: {@code \bname\b} matches the standalone {@code name} column (e.g.
+     * {@code u.name}, the user's real name) but does NOT match {@code vendor_name},
+     * {@code item_name}, {@code building_name}, etc. — those are single tokens
+     * because underscores are word characters in regex.
      */
     private static final Pattern FORBIDDEN_COLUMNS_PATTERN = Pattern.compile(
-            "(?i)\\b(password|reset_otp|reset_otp_expiry)\\b"
+            "(?i)\\b(password|reset_otp|reset_otp_expiry|wallet_balance|email|phone|" +
+            "admin_secret|notifications_enabled|is_active|name)\\b"
     );
 
     /**
-     * Cross-role queries that EMPLOYEE users are never allowed to run.
-     * Vendors / admins are exempt — they have legitimate reasons to see
-     * other people's wallet_balance, role, is_active, etc.
-     *
-     * Note: we only block AGGREGATIONS on wallet_balance (SUM/AVG/MAX/MIN/COUNT)
-     * or grouping by other users. A plain SELECT wallet_balance ... WHERE user_id = self
-     * is fine — that's just the user checking their own balance.
+     * {@code SELECT *} is always dangerous against the users table — even when
+     * we redact known sensitive columns post-query, new columns added later
+     * would leak silently. Force the LLM to select explicit, audited columns.
      */
-    private static final Pattern EMPLOYEE_FORBIDDEN_PATTERN = Pattern.compile(
-            "(?i)(" +
-            "\\b(SUM|AVG|MAX|MIN|COUNT)\\s*\\(\\s*(DISTINCT\\s+)?wallet_balance" +    // wallet aggregations
-            "|\\bGROUP\\s+BY\\s+(vendor_id|employee_id|role)" +                       // cross-user grouping
-            "|\\badmin_secret\\b" +                                                    // admin-only field
-            "|\\bSUM\\s*\\(\\s*(DISTINCT\\s+)?(total_amount|price|quantity)\\b" +     // sales aggregations
-            ")"
+    private static final Pattern SELECT_STAR_PATTERN = Pattern.compile(
+            "(?i)select\\s+\\*"
     );
 
     /**
-     * Columns we always strip from the data we feed into the humanizer prompt,
-     * as a belt-and-braces backstop: even if forbidden SQL slips past the
-     * pre-execution filter, the LLM never sees these field values.
+     * Any query that touches the {@code users} table must restrict to
+     * {@code role = 'VENDOR'}. This stops jailbroken SQL like {@code SELECT *
+     * FROM users WHERE role = 'EMPLOYEE'} from leaking other employees' rows.
+     */
+    private static final Pattern USERS_TABLE_PATTERN = Pattern.compile(
+            "(?i)\\busers\\b"
+    );
+    private static final Pattern VENDOR_ROLE_FILTER_PATTERN = Pattern.compile(
+            "(?i)role\\s*=\\s*'VENDOR'"
+    );
+
+    /**
+     * First-line privacy filter — catch personal questions before they reach the LLM.
+     * Saves a Gemini call AND guarantees the rebuff text is verbatim.
+     */
+    private static final Pattern PERSONAL_QUESTION_PATTERN = Pattern.compile(
+            "(?i)\\b(" +
+            // "my X" where X is a personal noun
+            "my\\s+(orders?|cart|wallet|balance|history|purchases?|spending|account|" +
+                  "dietary|profile|name|email|phone|id|preferences?|allergies|meals?|food)|" +
+            // "what did I X" / "when did I X" / etc.
+            "(what|when|where|how|why|did)\\s+(did\\s+)?i\\s+(eat|order|buy|spend|have|get|pick|consume|pay)|" +
+            // "I have/had ordered/eaten/etc." — note: 'have' and 'had' are optional so we also
+            // catch plain "I ate", "I ordered". 'i'?ve' separately catches the contraction "I've".
+            "\\bi\\s+(have\\s+|had\\s+)?(ordered|bought|eaten|ate|spent|paid|consumed)\\b|" +
+            "\\bi'?ve\\s+(ordered|bought|eaten|spent|had|consumed|paid)\\b|" +
+            // "when/what was my last"
+            "(when|what)\\s+was\\s+my\\s+last|" +
+            // "who am I" / "am I allergic / vegetarian / vegan"
+            "who\\s+am\\s+i|" +
+            "am\\s+i\\s+(allergic|vegetarian|vegan)" +
+            ")\\b"
+    );
+
+    /**
+     * Stripped from every row before it's fed to the humanizer LLM — even if
+     * the upstream filters miss something, these values never leave the server.
      */
     private static final Set<String> ALWAYS_REDACT_COLUMNS = Set.of(
-            "password", "reset_otp", "reset_otp_expiry"
+            "password", "reset_otp", "reset_otp_expiry",
+            "wallet_balance", "email", "phone",
+            "user_id", "employee_id", "admin_secret",
+            "notifications_enabled", "is_active"
     );
 
     private static final String SCHEMA_CONTEXT = """
-Database Schema for OneAppetite (a campus food ordering platform)
+Allowed schema for the OneAppetite General Campus Food Guide.
+Everything else is OFF-LIMITS — never reference user-specific tables/columns.
 
-1. USERS (table name: users)
-   Columns: user_id (INT, PK), name (VARCHAR), email (VARCHAR, UNIQUE),
-   role (ENUM: 'EMPLOYEE','VENDOR','ADMIN'), building_id (INT, FK->buildings),
-   vendor_name (VARCHAR), vendor_description (VARCHAR), vendor_type (VARCHAR),
-   stall_floor (VARCHAR), stall_wing (VARCHAR), is_active (BOOLEAN),
-   wallet_balance (DOUBLE), notifications_enabled (BOOLEAN)
+1. MENU_ITEMS  (menu_items)
+   Columns: item_id, item_name, category, meal_course, dietary_type,
+            price, quantity_available, is_in_stock, vendor_id
+   - dietary_type: 'Veg' or 'NonVeg' — use UPPER(dietary_type) for safe comparisons.
+   - meal_course:  'Breakfast', 'Lunch', 'Dinner'.
+   - Availability filter (MANDATORY on every listing query):
+       WHERE mi.is_in_stock = TRUE AND mi.quantity_available > 0
 
-   IMPORTANT — exact value reference for filter columns:
-   - role: exactly 'EMPLOYEE', 'VENDOR', or 'ADMIN' (uppercase).
-   - vendor_type: either 'Veg' or 'NonVeg' (same case rule as menu_items.dietary_type — use UPPER() for safety).
-   - is_active: TRUE = active user, FALSE = deactivated. When counting "vendors" without other qualifiers, filter by is_active = TRUE.
+2. USERS  (read ONLY the vendor row for display purposes)
+   Allowed columns: user_id (join key only), vendor_name, stall_floor,
+                    stall_wing, vendor_type, building_id
+   Required filter: role = 'VENDOR'
+   NEVER select wallet_balance, email, phone, name, password, is_active.
 
-2. CITIES (table name: cities)
-   Columns: city_id (INT, PK), city_name (VARCHAR)
+3. BUILDINGS  (buildings)              — building_id, campus_id, building_name
+4. CAMPUSES   (campuses)               — campus_id, city_id, campus_name, address
+5. CITIES     (cities)                 — city_id, city_name
+6. VENDOR_EXTRA_BUILDINGS              — vendor↔building coverage (user_id, building_id)
 
-3. CAMPUSES (table name: campuses)
-   Columns: campus_id (INT, PK), city_id (INT, FK->cities), campus_name (VARCHAR), address (VARCHAR)
-
-4. BUILDINGS (table name: buildings)
-   Columns: building_id (INT, PK), campus_id (INT, FK->campuses), building_name (VARCHAR)
-
-5. MENU ITEMS (table name: menu_items)
-   Columns: item_id (INT, PK), item_name (VARCHAR), category (VARCHAR),
-   meal_course (VARCHAR), dietary_type (VARCHAR), price (DOUBLE),
-   quantity_available (INT), is_in_stock (BOOLEAN), vendor_id (INT, FK->users), min_prep_time (INT)
-
-   IMPORTANT — exact value reference for filter columns:
-   - dietary_type: stored as either 'Veg' or 'NonVeg' (case may vary; ALWAYS compare with UPPER(dietary_type) IN ('VEG','VEGETARIAN') for veg, or UPPER(dietary_type) IN ('NONVEG','NON_VEG','NON-VEG') for non-veg).
-   - meal_course: one of 'Breakfast', 'Lunch', 'Dinner'.
-   - category: free-form, examples: 'Parathas','Sandwiches','Snacks','Combo','Rice','Indo-Chinese','Starters','Grills','Egg Dishes','Curry','Biryani','Wraps','Soups','Side dish','Main course','Pizza','Pasta','Sides','Wings','Beverages','Bakery','Light Bites','Chaat','Street Food','Cakes','Indian Sweets','Waffles','Salads','Bowls','Platters','South Indian'.
-   - is_in_stock: TRUE means available, FALSE means out of stock.
-   - For "available" or "in stock" filters: WHERE is_in_stock = TRUE AND quantity_available > 0.
-
-6. ORDERS (table name: orders)
-   Columns: order_id (INT, PK), employee_id (INT, FK->users), vendor_id (INT, FK->users),
-   token_number (VARCHAR), status (ENUM: 'CART','PLACED','PREPARING','READY','PICKED_UP','COMPLETED','PENDING'),
-   total_amount (FLOAT), order_time (DATETIME), ready_time (DATETIME)
-
-7. ORDER ITEMS (table name: order_items)
-   Columns: order_item_id (INT, PK), order_id (INT, FK->orders),
-   item_id (INT, FK->menu_items), quantity (INT), price (FLOAT)
-
-8. NOTIFICATIONS (table name: notifications)
-   Columns: id (INT, PK), user_id (INT, FK->users), message (VARCHAR),
-   timestamp (DATETIME), is_read (BOOLEAN)
-
-9. VENDOR EXTRA BUILDINGS (table name: vendor_extra_buildings)
-   Columns: user_id (INT, FK->users), building_id (INT, FK->buildings)
-
-Query Generation Rules:
-- All table names are lowercase. Use exactly: users, cities, campuses, buildings, menu_items, orders, order_items, notifications, vendor_extra_buildings.
-- Always use proper JOINs based on the listed FKs.
-- Respect EXACT ENUM values for WHERE clauses.
-- users.role values are exactly: 'EMPLOYEE', 'VENDOR', 'ADMIN'.
-- Order status values are exactly: 'CART','PLACED','PREPARING','READY','PICKED_UP','COMPLETED','PENDING'.
-- employee_id and vendor_id in orders both reference users.user_id.
-- vendor_id in menu_items references users.user_id.
+FORBIDDEN — do not reference, ever:
+  - Tables:  orders, order_items, notifications
+  - Columns: password, reset_otp, reset_otp_expiry, wallet_balance, email,
+             phone, is_active, notifications_enabled, admin_secret
+  - WHERE clauses on user_id / employee_id targeting a specific person —
+    there is no logged-in user from the food guide's perspective.
 """;
 
-    public ChatService(@Qualifier("readOnlyJdbcTemplate") JdbcTemplate jdbcTemplate, GeminiClient geminiClient) {
-        this.jdbcTemplate = jdbcTemplate;
-        this.geminiClient = geminiClient;
+    public ChatService(@Qualifier("readOnlyJdbcTemplate") JdbcTemplate jdbcTemplate,
+                       GeminiClient geminiClient) {
+        this.jdbcTemplate  = jdbcTemplate;
+        this.geminiClient  = geminiClient;
     }
 
     public String chat(ChatRequest req) {
-        String userPrompt = req.message();
-        String role       = req.role()   == null ? "EMPLOYEE" : req.role();
-        Integer userId    = req.userId() == null ? 0          : req.userId();
-        System.out.println("\n========== [OneBot] User asked: " + userPrompt + " (role=" + role + ", userId=" + userId + ") ==========");
+        String userPrompt = req.message() == null ? "" : req.message().trim();
+        // Trim AND uppercase so " ADMIN ", "Admin\n", "admin" all collapse to "ADMIN".
+        // Without trim(), trailing whitespace would bypass the equals("ADMIN") check.
+        String role       = req.role()    == null ? "" : req.role().trim().toUpperCase();
 
-        String sqlPrompt = buildSqlPrompt(userPrompt, role, userId);
-        String generatedSql = geminiClient.generateText(sqlPrompt).trim();
-        System.out.println("[OneBot] Gemini raw output:\n" + generatedSql);
+        System.out.println("\n========== [FoodGuide] Asked: " + userPrompt + " (role=" + role + ") ==========");
 
-        if (generatedSql.contains("REJECT:")) {
-            System.out.println("[OneBot] → REJECTED (off-topic or modification)");
-            return "I am OneBot, an assistant for OneAppetite. I can only answer questions about menus, orders, vendors, and campus information.";
+        // ── Hard block: admin dashboard has no chatbot ──
+        if ("ADMIN".equals(role)) {
+            System.out.println("[FoodGuide] → ADMIN role blocked at entrance");
+            return ADMIN_BLOCK_REPLY;
         }
 
-        generatedSql = generatedSql.replace("```sql", "").replace("```", "").trim();
-        System.out.println("[OneBot] Cleaned SQL:\n" + generatedSql);
+        // ── Empty / whitespace-only message: short-circuit, don't burn a Gemini call ──
+        if (userPrompt.isEmpty()) {
+            return "Ask me anything about today's campus menu or calorie estimates.";
+        }
 
-        if (!generatedSql.toUpperCase().startsWith("SELECT")) {
-            System.out.println("[OneBot] → Not a SELECT, returning as plain text reply");
-            return generatedSql;
+        // ── Privacy rebuff: detect personal questions BEFORE invoking the LLM ──
+        if (PERSONAL_QUESTION_PATTERN.matcher(userPrompt).find()) {
+            System.out.println("[FoodGuide] → Personal-question pattern matched; returning rebuff");
+            return PRIVACY_REBUFF;
+        }
+
+        String sqlPrompt    = buildSqlPrompt(userPrompt);
+        String generatedSql = geminiClient.generateText(sqlPrompt).trim();
+        System.out.println("[FoodGuide] LLM raw:\n" + generatedSql);
+
+        if (isServiceHiccup(generatedSql)) {
+            System.err.println("[FoodGuide] → Service hiccup at SQL-gen step; returning friendly fallback");
+            return SERVICE_HICCUP_REPLY;
+        }
+
+        if (generatedSql.contains("REJECT: personal")) return PRIVACY_REBUFF;
+        if (generatedSql.contains("REJECT:"))          return SCOPE_REBUFF;
+
+        generatedSql = generatedSql.replace("```sql", "").replace("```", "").trim();
+
+        // The LLM occasionally wraps the SQL in a natural-language preamble like
+        // "Since it's currently 14:08, here are some lunch options: SELECT ...".
+        // If we find a SELECT anywhere in the reply, strip the preamble and treat
+        // it as SQL. Otherwise it's a conversational reply (greeting, calorie est).
+        int selectIdx = generatedSql.toUpperCase().indexOf("SELECT ");
+        if (selectIdx < 0) {
+            // No SELECT keyword — but the LLM might have emitted standalone DML/DDL
+            // like "DELETE FROM menu_items". Catch that here before treating as
+            // conversational text; otherwise the raw SQL statement would leak to the user.
+            if (HARMFUL_SQL_PATTERN.matcher(generatedSql).find()) {
+                System.out.println("[FoodGuide] → Blocked: non-SELECT response contains DML/DDL keywords");
+                return "Security Alert: Query blocked. Only read operations are permitted.";
+            }
+            return appendCalorieDisclaimerIfNeeded(generatedSql);
+        }
+        if (selectIdx > 0) {
+            System.out.println("[FoodGuide] Stripped " + selectIdx + " chars of preamble before SELECT");
+            generatedSql = generatedSql.substring(selectIdx).trim();
         }
 
         if (HARMFUL_SQL_PATTERN.matcher(generatedSql).find()) {
-            System.out.println("[OneBot] → Blocked by harmful-SQL regex");
             return "Security Alert: Query blocked. Only read operations are permitted.";
         }
-
-        // ── HARD ENFORCEMENT 1: forbidden columns (universal) ──
-        // No role should ever be able to read these — block at SQL level.
-        if (FORBIDDEN_COLUMNS_PATTERN.matcher(generatedSql).find()) {
-            System.out.println("[OneBot] → Blocked: SQL references forbidden columns (password/OTP)");
-            return "I'm not able to share sensitive account information like passwords or security codes.";
+        if (FORBIDDEN_TABLES_PATTERN.matcher(generatedSql).find()) {
+            System.out.println("[FoodGuide] → Blocked: forbidden table reference");
+            return PRIVACY_REBUFF;
         }
-
-        // ── HARD ENFORCEMENT 2: cross-role guardrails for EMPLOYEE ──
-        // Employees can't query wallet balances of others, admin secrets,
-        // or aggregate sales/orders grouped by vendor/employee.
-        if ("EMPLOYEE".equals(role) && EMPLOYEE_FORBIDDEN_PATTERN.matcher(generatedSql).find()) {
-            System.out.println("[OneBot] → Blocked: employee attempted vendor/admin-only query");
-            return "Sorry, I can only help you with your own orders, menu browsing, and food choices. " +
-                   "Sales analytics and other users' details aren't available to employees.";
+        if (FORBIDDEN_COLUMNS_PATTERN.matcher(generatedSql).find()) {
+            System.out.println("[FoodGuide] → Blocked: forbidden column reference");
+            return PRIVACY_REBUFF;
+        }
+        if (SELECT_STAR_PATTERN.matcher(generatedSql).find()) {
+            System.out.println("[FoodGuide] → Blocked: SELECT * (must enumerate columns)");
+            return PRIVACY_REBUFF;
+        }
+        if (USERS_TABLE_PATTERN.matcher(generatedSql).find()
+                && !VENDOR_ROLE_FILTER_PATTERN.matcher(generatedSql).find()) {
+            System.out.println("[FoodGuide] → Blocked: users table without role='VENDOR' filter");
+            return PRIVACY_REBUFF;
         }
 
         try {
             List<Map<String, Object>> dbResults = jdbcTemplate.queryForList(generatedSql);
-            System.out.println("[OneBot] DB returned " + dbResults.size() + " row(s)");
+            System.out.println("[FoodGuide] DB returned " + dbResults.size() + " row(s)");
 
             if (dbResults.isEmpty()) {
-                System.out.println("[OneBot] → No rows; sending canned 'no data' response");
-                return "I couldn't find any data matching your request.";
+                return "Nothing's matching that on today's live campus menu. " +
+                       "Try a broader option like 'breakfast', 'snacks', or 'veg lunch'.";
             }
 
-            // ── BELT-AND-BRACES: strip sensitive columns from results even
-            //    if the SQL filter somehow let them through. Defense in depth.
             List<Map<String, Object>> sanitized = sanitizeResults(dbResults);
-
-            String humanPrompt =
-                "User asked: '" + userPrompt + "'.\n" +
-                "Database returned " + sanitized.size() + " row(s) of EXACT data:\n" + sanitized + "\n\n" +
-                "ABSOLUTE ANTI-HALLUCINATION RULES (most important):\n" +
-                "1. You MUST only use values literally present in the rows above. " +
-                "Never invent item names, prices, categories, vendor names, or any other field. " +
-                "If a row has 'order_id' and 'total_amount' but no 'item_name', " +
-                "DO NOT invent item names like 'Main Course' or 'Snack' — just describe what's actually there.\n" +
-                "2. If the data is an aggregate (a single row with COUNT, SUM, AVG, or just one numeric value), " +
-                "respond with ONE short sentence stating that value. No bullet list. Example: 'You have 6 orders today.' " +
-                "or 'Your wallet balance is ₹935.'\n" +
-                "3. If the data is a list of multiple rows with descriptive fields (item_name, vendor_name, etc.), " +
-                "THEN use the bullet format below.\n" +
-                "4. If you don't have enough columns to format a bullet list, omit the list entirely. " +
-                "Just give the one-sentence answer.\n\n" +
-                "Format when listing multiple rows:\n" +
-                "  Line 1: one-sentence summary that mentions the total count.\n" +
-                "  Line 2: blank line.\n" +
-                "  Lines 3+: up to 10 bullets, each in the format:\n" +
-                "    • <exact value from a name column> — ₹<exact price if a price column exists> (<exact category or vendor from a column>)\n" +
-                "  If more than 10 rows: end with '…and N more.' using the real number.\n\n" +
-                "Style rules:\n" +
-                "- Use PLAIN TEXT only. No markdown asterisks, underscores, or hashes.\n" +
-                "- Use the • bullet character (U+2022).\n" +
-                "- Use real newline characters between lines.\n" +
-                "- Never mention SQL, databases, queries, or tables.\n" +
-                "- Friendly, concise, professional tone — like a polite cafeteria attendant.\n" +
-                "- If unsure about a value, leave it out rather than guess.";
-
-            return geminiClient.generateText(humanPrompt);
+            String humanPrompt = buildHumanizePrompt(userPrompt, sanitized);
+            String reply = geminiClient.generateText(humanPrompt);
+            if (isServiceHiccup(reply)) {
+                System.err.println("[FoodGuide] → Service hiccup at humanize step; returning friendly fallback");
+                return SERVICE_HICCUP_REPLY;
+            }
+            return reply;
 
         } catch (Exception e) {
-            System.err.println("[OneBot] !!! Database Execution Error !!!");
-            System.err.println("[OneBot] Failed SQL was:\n" + generatedSql);
-            System.err.println("[OneBot] MySQL error: " + e.getMessage());
-            e.printStackTrace();
-            return "I encountered an error analyzing the data. Please try asking in a different way.";
+            System.err.println("[FoodGuide] !!! DB execution error !!!");
+            System.err.println("[FoodGuide] Failed SQL: " + generatedSql);
+            System.err.println("[FoodGuide] MySQL:      " + e.getMessage());
+            return "I hit an error pulling today's menu. Try asking in a different way.";
         }
     }
 
     /**
+     * Detect the fallback strings GeminiClient returns when its HTTP call fails
+     * (rate-limit, safety-policy block, missing API key, parse error). We don't
+     * want any of those surfacing to end users — they expose infra terms like
+     * "AI service" and look like a bug. Replace with a friendly in-persona reply.
+     */
+    private boolean isServiceHiccup(String reply) {
+        if (reply == null || reply.isBlank()) return true;
+        String lower = reply.toLowerCase();
+        return lower.contains("trouble connecting to the ai service")
+            || lower.contains("api key is missing")
+            || lower.contains("error parsing response")
+            || lower.contains("chatbot api key");
+    }
+
+    /**
      * Strip sensitive column values from every row before they reach the
-     * humanizer LLM. Even if a SQL filter is bypassed, the actual data values
-     * never leave this server. The LLM only ever sees redacted rows, so it
-     * cannot leak them in the natural-language response.
+     * humanizer LLM. Defense in depth: even if a filter is bypassed, the LLM
+     * never sees the values and cannot leak them in the natural-language reply.
      */
     private List<Map<String, Object>> sanitizeResults(List<Map<String, Object>> rows) {
         return rows.stream()
@@ -238,89 +304,120 @@ Query Generation Rules:
     }
 
     /**
-     * Role-specific context that scopes what the chatbot is allowed to answer
-     * and how it should interpret first-person words like "my", "I", "our".
+     * Maps the current hour to a meal course + time window so open-ended asks
+     * ("what should I eat?") get suggestions aligned with what's actually being
+     * served right now.
      */
-    private String roleContext(String role, Integer userId) {
-        switch (role) {
-            case "VENDOR":
-                return "CURRENT USER CONTEXT:\n" +
-                       "- The person asking is a VENDOR with user_id = " + userId + ".\n" +
-                       "- They are ALWAYS allowed to query THEIR OWN data — wallet_balance, vendor_name, " +
-                       "orders, menu items, sales, etc. — as long as the WHERE clause scopes to user_id = " + userId + " (or vendor_id = " + userId + ").\n" +
-                       "- When they say 'my orders', 'my items', 'my menu', 'best selling', 'top items', etc., scope strictly:\n" +
-                       "    • For menu_items queries: WHERE vendor_id = " + userId + "\n" +
-                       "    • For orders queries: WHERE vendor_id = " + userId + "\n" +
-                       "    • For order_items: JOIN orders o ON oi.order_id = o.order_id WHERE o.vendor_id = " + userId + "\n" +
-                       "- WALLET / EARNINGS / SALES / REVENUE (CRITICAL — must match the UI):\n" +
-                       "    • If the user's question is one of these EXACT phrasings or close variants — 'wallet', 'wallet balance', " +
-                       "'my earnings', 'total earnings', 'my sales', 'my total sales', 'my revenue', 'how much have I earned', " +
-                       "'how much have I made' — the SQL MUST BE EXACTLY:\n" +
-                       "        SELECT wallet_balance FROM users WHERE user_id = " + userId + "\n" +
-                       "      NEVER write SUM(orders.total_amount) for these. NEVER. The wallet_balance column IS the answer.\n" +
-                       "    • The wallet_balance column reflects the live credited earnings (same value shown on the vendor's Settings page as 'Total Earnings'). " +
-                       "Using SUM(total_amount) would drift from this and confuse the vendor.\n" +
-                       "    • ONLY use SUM(orders.total_amount) when the user explicitly attaches a time window like " +
-                       "'sales TODAY', 'sales THIS WEEK', 'sales LAST MONTH', 'orders YESTERDAY'. " +
-                       "Plain 'my sales' WITHOUT a time qualifier = wallet_balance, not SUM.\n" +
-                       "- For 'best selling' or 'top items', use SUM(oi.quantity) per item_id, ORDER BY DESC, scoped to this vendor.\n" +
-                       "- For 'today', use WHERE DATE(order_time) = CURDATE().\n" +
-                       "- Do NOT expose data from other vendors. Refuse cross-vendor comparisons with REJECT: cross-vendor.";
-
-            case "ADMIN":
-                return "CURRENT USER CONTEXT:\n" +
-                       "- The person asking is an ADMIN (user_id = " + userId + ").\n" +
-                       "- Admins can ask about ANY user, vendor, employee, order, menu item, or platform-wide statistic.\n" +
-                       "- When they say 'employees', filter users WHERE role = 'EMPLOYEE'.\n" +
-                       "- When they say 'vendors', filter users WHERE role = 'VENDOR'.\n" +
-                       "- 'active' / 'inactive' maps to is_active = TRUE / FALSE.\n" +
-                       "- 'top vendor by revenue' = SUM(orders.total_amount) GROUP BY vendor_id ORDER BY total DESC.\n" +
-                       "- 'top customer by spend' = SUM(orders.total_amount) GROUP BY employee_id ORDER BY total DESC.\n" +
-                       "- They can see cross-vendor and cross-employee data. No scoping restrictions.";
-
-            case "EMPLOYEE":
-            default:
-                return "CURRENT USER CONTEXT:\n" +
-                       "- The person asking is an EMPLOYEE / customer (user_id = " + userId + ").\n" +
-                       "- They are ALWAYS allowed to query THEIR OWN data — wallet_balance, name, email, " +
-                       "their own orders, their own cart — as long as the WHERE clause scopes to user_id = " + userId + " (or employee_id = " + userId + ").\n" +
-                       "- When they say 'my orders' or 'my cart', scope to WHERE employee_id = " + userId + ".\n" +
-                       "- For 'my wallet', 'wallet balance', 'how much money do I have': " +
-                       "SELECT wallet_balance FROM users WHERE user_id = " + userId + ".\n" +
-                       "- For 'available items', filter menu_items.is_in_stock = TRUE AND quantity_available > 0.\n" +
-                       "- They CANNOT see other employees' wallets/orders, vendor sales aggregations, or admin data. " +
-                       "If asked, REJECT: cross-role.";
+    private String currentMealContext() {
+        LocalDateTime now = LocalDateTime.now();
+        int hour = now.getHour();
+        String course;
+        String window;
+        if (hour < 10) {
+            course = "Breakfast";
+            window = "morning";
+        } else if (hour < 15) {
+            course = "Lunch";
+            window = "afternoon";
+        } else if (hour < 19) {
+            course = "Snacks / Light Bites";
+            window = "evening";
+        } else {
+            course = "Dinner";
+            window = "evening";
         }
+        return "Current campus time: " + now.format(DateTimeFormatter.ofPattern("HH:mm")) +
+               " (" + window + "). Suggested meal course right now: " + course + ".";
     }
 
-    private String buildSqlPrompt(String userPrompt, String role, Integer userId) {
-        return "You are OneBot, an AI assistant restricted strictly to the OneAppetite food ordering platform database.\n\n" +
-                roleContext(role, userId) + "\n\n" +
-                "Rules:\n" +
-                "0. SECURITY RULES (highest priority — these override every other rule):\n" +
-                "   • NEVER select 'password', 'reset_otp', or 'reset_otp_expiry'. If asked, reply EXACTLY 'REJECT: sensitive'.\n" +
-                "   • If the role context above says the user is EMPLOYEE, NEVER write queries that read other employees' wallet_balance, other vendors' sales/orders, or admin-only data. Reply EXACTLY 'REJECT: cross-role'.\n" +
-                "   • If the role context above says the user is VENDOR, NEVER write queries that touch other vendors' data (other vendor_id values). Reply EXACTLY 'REJECT: cross-vendor'.\n" +
-                "   • Honor the role scoping in the CURRENT USER CONTEXT block — those WHERE clauses are mandatory, not suggestions.\n" +
-                "1. If the user asks about ANY topic outside of food ordering, menus, vendors, orders, campuses, or buildings, reply EXACTLY with 'REJECT: off-topic'.\n" +
-                "2. If the user tries to modify data (add, delete, update), reply EXACTLY with 'REJECT: modification'.\n" +
-                "3. Otherwise, write a highly optimized MySQL SELECT query to answer the question.\n" +
-                "4. Use NOW() for current datetime references.\n" +
-                "5. Output ONLY the raw SQL query. NO markdown, NO explanations.\n" +
-                "6. If the user greets you or asks who you are, respond with a friendly message explaining that you are OneBot, the AI assistant for OneAppetite — a campus food ordering platform.\n" +
-                "7. NEVER write SELECT COUNT(*). Instead, select the actual rows with relevant descriptive columns " +
-                "(e.g. for menu items: item_name, price, category, dietary_type; for vendors: vendor_name, building_id, vendor_type). " +
-                "The summarizer will count them and list examples. ALWAYS append LIMIT 50 to listing queries for safety.\n" +
-                "8. When the question implies showing items, ALWAYS JOIN to users to get vendor_name when listing menu items, " +
-                "and to buildings to get building_name when listing vendors. This makes the answer more informative.\n" +
-                "9. For ANY search by name (item_name, vendor_name, category, building_name, etc.), NEVER use exact equality. " +
-                "Always use case-insensitive partial matching: LOWER(column) LIKE LOWER('%keyword%'). " +
-                "Example: user asks 'price of aloo paratha' → WHERE LOWER(mi.item_name) LIKE LOWER('%aloo paratha%'). " +
-                "Example: user asks 'items at quick bites' → JOIN users u WHERE LOWER(u.vendor_name) LIKE LOWER('%quick bites%'). " +
-                "This handles real item names like 'Aloo Paratha + Curd' matching shorter user queries.\n" +
-                "10. If the user uses casual short words like 'maggi', 'biryani', 'pizza', 'dosa' — treat them as keywords " +
-                "and search both item_name AND category with LIKE. Be generous with matching.\n\n" +
-                SCHEMA_CONTEXT + "\n\n" +
-                "User Prompt: " + userPrompt;
+    /**
+     * If the LLM's plain-text reply mentions a calorie number, append the
+     * "these are estimates" disclaimer so we never share a number bare.
+     */
+    private String appendCalorieDisclaimerIfNeeded(String reply) {
+        if (reply == null) return reply;
+        boolean mentionsCalories = reply.toLowerCase().matches(".*\\b(calorie|kcal|kj|cals)\\b.*");
+        if (mentionsCalories && !reply.toLowerCase().contains("estimate")) {
+            return reply.trim() + "\n\n(Calorie figures are rough estimates for a typical campus portion.)";
+        }
+        return reply;
+    }
+
+    private String buildSqlPrompt(String userPrompt) {
+        return "You are the OneAppetite General Campus Food Guide.\n" +
+               "You are anonymous: there is NO logged-in user, NO user_id, NO personal history available to you.\n" +
+               "Your only job is to help people navigate today's campus menu and share approximate calorie info.\n\n" +
+               currentMealContext() + "\n\n" +
+               "Rules (priority order — top rule wins):\n" +
+               "0. PRIVACY (highest priority):\n" +
+               "   • NEVER write queries against orders, order_items, notifications, or wallet/email/phone columns.\n" +
+               "   • NEVER include a WHERE clause that pins down a specific user_id or employee_id.\n" +
+               "   • If the user asks about THEIR orders, wallet, history, preferences, or identity, " +
+               "reply EXACTLY: 'REJECT: personal'.\n" +
+               "1. SCOPE:\n" +
+               "   • If the question is unrelated to campus food, dining locations, or nutrition, " +
+               "reply EXACTLY: 'REJECT: off-topic'.\n" +
+               "   • If the user tries to insert/update/delete data, reply EXACTLY: 'REJECT: modification'.\n" +
+               "2. AVAILABILITY (operational scope):\n" +
+               "   • Every listing query MUST filter: WHERE mi.is_in_stock = TRUE AND mi.quantity_available > 0.\n" +
+               "   • When the user asks open-ended things like 'what should I eat?' or 'suggest something', " +
+               "prefer items whose meal_course matches the 'Suggested meal course' line above.\n" +
+               "   • When the user names a meal time (breakfast/lunch/dinner/snacks), filter meal_course accordingly.\n" +
+               "3. CALORIES (nutritional estimates):\n" +
+               "   • The database has NO calorie column. If the user asks calorie counts for an item, " +
+               "DO NOT write SQL — reply in plain text with an approximation " +
+               "(e.g. 'A typical campus vegetable wrap is around 350 kcal').\n" +
+               "   • Always say 'approximately', 'around', or '~' — never quote an exact figure.\n" +
+               "   • Always pair the number with an 'estimate' disclaimer in the same sentence.\n" +
+               "4. SQL output rules:\n" +
+               "   • Output ONLY the raw SQL — no markdown fences, no natural-language preamble, no commentary.\n" +
+               "   • Your reply MUST start with the word SELECT and contain nothing else before it. " +
+               "An automated parser reads the response; any text before SELECT will be shown to the user as-is, which breaks the experience.\n" +
+               "   • WRONG (do not do this): 'Since it's lunch time, here are some options: SELECT ...'\n" +
+               "   • RIGHT: 'SELECT ...'\n" +
+               "   • Always JOIN users u ON mi.vendor_id = u.user_id AND u.role = 'VENDOR' " +
+               "and select u.vendor_name when listing menu items, so the answer says where to get the item.\n" +
+               "   • For name searches use LOWER(col) LIKE LOWER('%keyword%') — never exact equality.\n" +
+               "   • NEVER use SELECT COUNT(*); select the rows so the summarizer can list and count.\n" +
+               "   • NEVER use SELECT *. Always enumerate the columns you need. The parser " +
+               "rejects SELECT * because new sensitive columns added to the users table could leak silently.\n" +
+               "   • If your query references the users table, it MUST include " +
+               "`AND u.role = 'VENDOR'` (or `WHERE u.role = 'VENDOR'` if no JOIN). " +
+               "Queries that touch users without this filter are rejected.\n" +
+               "   • Never select u.name — that is the user's personal name. " +
+               "Use u.vendor_name (the stall name) instead.\n" +
+               "   • Append LIMIT 25 to every listing query.\n" +
+               "5. IDENTITY / GREETING:\n" +
+               "   • If the user greets you or asks who you are, answer in plain text (no SQL). " +
+               "Say you're the campus food guide and you can suggest in-stock items, dining locations, " +
+               "and calorie estimates — but you do not know who they are.\n\n" +
+               SCHEMA_CONTEXT + "\n\n" +
+               "User prompt: " + userPrompt;
+    }
+
+    private String buildHumanizePrompt(String userPrompt, List<Map<String, Object>> rows) {
+        return "You are the OneAppetite General Campus Food Guide. The user asked: '" + userPrompt + "'.\n" +
+               currentMealContext() + "\n\n" +
+               "Database returned " + rows.size() + " row(s) of EXACT data:\n" + rows + "\n\n" +
+               "Rules:\n" +
+               "1. Only use values literally present in the rows above. Never invent item names, " +
+               "prices, vendor names, or buildings.\n" +
+               "2. Lead with a one-sentence summary that mentions the meal-time context " +
+               "(e.g. 'Here are breakfast picks available right now:').\n" +
+               "3. Then list up to 8 bullets. For each row, plug the ACTUAL values from that " +
+               "row into these four slots — never print literal placeholder text like " +
+               "'<price>' or '<vendor_name>'.\n" +
+               "   Slot layout:  [item_name] — ₹[price] at [vendor_name] ([category])\n" +
+               "   Concrete example using real values (this is what a bullet should look like):\n" +
+               "     • Paneer Tikka Wrap — ₹120 at Quick Bites (Wraps) — ~380 kcal per standard portion\n" +
+               "   Use the • bullet character (U+2022). Append an approximate calorie estimate " +
+               "after the bullet when it fits naturally; skip the estimate rather than guess wildly. " +
+               "If a numeric field is missing for some row, drop that field from that bullet — never " +
+               "fill it with the literal text '<price>' or any other placeholder.\n" +
+               "4. End your reply with this exact line on its own:\n" +
+               "     (Calorie figures are estimates for a typical campus portion.)\n" +
+               "5. NEVER reference the user's identity, orders, wallet, or history — you don't know who they are.\n" +
+               "6. Plain text only — no markdown asterisks/underscores/hashes. Use the • bullet character (U+2022).\n" +
+               "7. If some rows match the suggested meal course and others don't, lead with the matches.";
     }
 }
